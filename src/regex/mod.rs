@@ -91,7 +91,7 @@ impl<T:Symbol> Regex<T>{
         }
         
         if valid{
-            return ind >= candidate.len()-1;
+            return ind >= candidate.len();
             
         }
 
