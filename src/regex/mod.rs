@@ -1,17 +1,18 @@
-use std::hash::Hash;
+
+use std::{hash::Hash, fmt::Debug};
 
 
-pub trait Symbol : PartialEq+Eq+Hash{}
+pub trait Symbol : PartialEq+Eq+Hash+Clone+Debug{}
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Quantifier{
     Exactly(usize),
     OneOrMany,
     ZeroOrMany,
     ZeroOrOne
 }
-#[derive(Debug)]
-pub enum RegexElement<T:Symbol>{
+#[derive(Debug, Clone, PartialEq)]
+pub enum  RegexElement<T:Symbol>{
     Item(T, Quantifier),
     Group(Vec<RegexElement<T>>, Quantifier),
     Set(T, T, Quantifier)
@@ -33,61 +34,68 @@ impl<T:Symbol> Regex<T>{
 
     }
 
-    fn match_item(value:&T, quantifier:&Quantifier, candidate: &[T]) -> (bool, usize){
-        let mut occurences = 0;
-        for c in candidate{
-            if value == c { occurences+=1 } else{ break; }
+
+    fn match_t(candidate: Option<&[T]>, e:&RegexElement<T>) -> (bool, usize){
+        return match e {
+            RegexElement::Item(value, qt) => {
+                let mut occurences = 0;
+
+                if let Some(candidate) = candidate{
+                    for c in candidate{
+                        if value == c { occurences+=1; } else{ break; }
+                    }
+                }
+
+                (match qt {
+                    Quantifier::Exactly(n) => *n == occurences,
+                    Quantifier::OneOrMany => occurences >= 1,
+                    Quantifier::ZeroOrMany => occurences >= 0,
+                    Quantifier::ZeroOrOne => occurences == 0 || occurences == 1
+                }, occurences)
+            },
+            RegexElement::Group(elements, qt) => {
+                let mut valid = false;
+                let mut ind = 0;
+
+                if let Some(candidate) = candidate{
+
+                    for element in elements{
+                        let mut passed = 0;
+                        (valid, passed) = Self::match_t(candidate.get(ind..), element);
+
+                        if valid { ind += passed; }
+                        else { return (false, ind); }
+                    }
+
+                    //Gérer la répétition de groupe
+                    
+                }
+
+
+                (valid, ind)
+            },
+            RegexElement::Set(l, h, qt) => (false, 0)
         }
-
-        return (match quantifier{
-            Quantifier::Exactly(qt) => *qt == occurences,
-            Quantifier::OneOrMany => occurences >= 1,
-            Quantifier::ZeroOrMany => occurences >= 0,
-            Quantifier::ZeroOrOne => occurences == 0 || occurences == 1
-        }, occurences)
-
-
     }
 
-    pub fn r#match(&self, candidate: &[T]) -> bool{
-        let mut pattern_iterator = self.pattern.iter();
-        let mut candidate_iterator = candidate.iter();
-
+    pub fn r#match(&self, candidate:&[T]) -> bool{
         let mut valid = false;
-        let mut symbol = candidate_iterator.next();
-        let mut element = pattern_iterator.next();
-        let mut count = 0;
+        let mut ind = 0;
 
-        loop{
-            match symbol{
-                Some(_) =>{
-                    if let Some(e) = element{
-                        match e {
-                            RegexElement::Item(value, quantifier) => {
-                                let mut passed = 0;
-                                (valid, passed) = Regex::match_item(value, quantifier, candidate);
-                                count += passed;
+        for element in &self.pattern{
+            let mut passed = 0;
+            (valid, passed) = Self::match_t(candidate.get(ind..), element);
 
-                                if valid && count == 0{
-                                    element = pattern_iterator.next();
-                                }else if valid && count > 0 {
-                                    symbol =  candidate_iterator.nth(count);
-                                }
-                            },
-                            RegexElement::Set(_, _, _) => { valid = false },
-                            RegexElement::Group(_, _) => { valid = false }
-                        }
-
-                        if !valid { break; }
-
-                        
-                    }
-                },
-                None => break
-            }
+            if valid { ind += passed; }
+            else { break;}
         }
+        
+        if valid{
+            return ind >= candidate.len()-1;
+            
+        }
+
         valid
     }
-
     
 }
