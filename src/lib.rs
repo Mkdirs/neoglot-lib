@@ -64,8 +64,6 @@ fn group_test(){
     assert_eq!(regex.r#match(candidate6), false, "que des 'a'");
     assert_eq!(regex.r#match(candidate7), true, "chaîne de 'a' puis un 'b'");
 
-    //Quantificateur de group pas encore au point
-    //Pour l'instanc ces 2 cas de figure retourneront false
     assert_eq!(regex.r#match(candidate8), false, "4 occurences du pattern 'ab'");
     assert_eq!(regex.r#match(candidate9), false, "4 occurences du pattern 'aaaab'");
 
@@ -73,4 +71,49 @@ fn group_test(){
     assert_eq!(regex.r#match(candidate11), false, "un 'a' puis une chaîne de 'b'");
     assert_eq!(regex.r#match(candidate12), false, "un seul 'b'");
 
+}
+
+#[test]
+fn group_quantifier_test(){
+    let regex = ChrRegex::new()
+        .then(RegexElement::Group(vec![RegexElement::Item('a', Quantifier::OneOrMany), RegexElement::Item('b', Quantifier::Exactly(1)) ], Quantifier::OneOrMany));
+
+    let candidate1 = &"ababab".chars().collect::<Vec<char>>();
+    let candidate2 = &"aaabaaabaaab".chars().collect::<Vec<char>>();
+    let candidate3 = &"ababab10ab4a5".chars().collect::<Vec<char>>();
+    let candidate4 = &"abaaabab".chars().collect::<Vec<char>>();
+    let candidate5 = &"aaabababaaab".chars().collect::<Vec<char>>();
+
+    assert_eq!(regex.r#match(candidate1), true, "3 occurences du pattern 'ab'");
+    assert_eq!(regex.r#match(candidate2), true, "3 occurences du pattern 'aaab'");
+    assert_eq!(regex.r#match(candidate3), false, "interruption du pattern 'ab'");
+    assert_eq!(regex.r#match(candidate4), true, "interruption du pattern 'ab' (bis)");
+    assert_eq!(regex.r#match(candidate5), true, "interruption du pattern 'aaab'");
+}
+
+#[test]
+fn complex_test(){
+    let regex = ChrRegex::new()
+        .then(RegexElement::Group(
+            vec![
+                RegexElement::Item('a', Quantifier::Exactly(1)),
+                RegexElement::Item('b', Quantifier::Exactly(1)),
+                RegexElement::Item('_', Quantifier::ZeroOrMany)
+            ], Quantifier::ZeroOrOne
+        ))
+        .then(RegexElement::Item('#', Quantifier::Exactly(1)))
+        .then(RegexElement::Item('n', Quantifier::OneOrMany));
+
+    
+    let candidate1 = &"#".chars().collect::<Vec<char>>();
+    let candidate2 = &"#n".chars().collect::<Vec<char>>();
+    let candidate3 = &"ab".chars().collect::<Vec<char>>();
+    let candidate4 = &"ab#n".chars().collect::<Vec<char>>();
+    let candidate5 = &"ab______#nnnnnnnn".chars().collect::<Vec<char>>();
+
+    assert_eq!(regex.r#match(candidate1), false);
+    assert_eq!(regex.r#match(candidate2), true);
+    assert_eq!(regex.r#match(candidate3), false);
+    assert_eq!(regex.r#match(candidate4), true);
+    assert_eq!(regex.r#match(candidate5), true);
 }

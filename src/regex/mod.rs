@@ -56,23 +56,38 @@ impl<T:Symbol> Regex<T>{
             RegexElement::Group(elements, qt) => {
                 let mut valid = false;
                 let mut ind = 0;
+                let mut occurences = 0;
 
-                if let Some(candidate) = candidate{
+                if let Some(candidate) = candidate {
+                    
+                    loop{
 
-                    for element in elements{
-                        let mut passed = 0;
-                        (valid, passed) = Self::match_t(candidate.get(ind..), element);
+                        for element in elements{
+                            let mut passed = 0;
+                            (valid, passed) = Self::match_t(candidate.get(ind..), element);
+    
+                            if valid { ind += passed; }
+                            else { break; }
+                        }
 
-                        if valid { ind += passed; }
-                        else { return (false, ind); }
+                        if valid { occurences += 1; }
+
+
+                        let (should_repeat, _) = Self::match_t(candidate.get(ind..), elements.get(0).unwrap());
+
+                        if !should_repeat { break; }
+    
                     }
 
-                    //Gérer la répétition de groupe
                     
                 }
 
-
-                (valid, ind)
+                (match qt{
+                    Quantifier::Exactly(n) => *n == occurences,
+                    Quantifier::OneOrMany => occurences >= 1,
+                    Quantifier::ZeroOrMany => occurences >= 0,
+                    Quantifier::ZeroOrOne => occurences == 0 || occurences == 1
+                }, ind)
             },
             RegexElement::Set(l, h, qt) => (false, 0)
         }
