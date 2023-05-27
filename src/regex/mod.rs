@@ -44,6 +44,7 @@ impl<T:Symbol> Regex<T>{
                 if let Some(candidate) = candidate {
                     for c in candidate{
                         if value == c { occurences+=1; } else{ break; }
+                        
                     }
                 }
 

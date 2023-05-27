@@ -153,3 +153,48 @@ fn snake_case(){
     assert_eq!(regex.r#match(candidate5), false);
     assert_eq!(regex.r#match(candidate6), false);
 }
+
+#[test]
+fn mail(){
+    let regex = ChrRegex::new()
+        .then(RegexElement::Set('a', 'z', Quantifier::Exactly(1)))
+        .then(RegexElement::Group(
+            vec![
+                RegexElement::AnyOf(vec![
+                    RegexElement::Set('a', 'z', Quantifier::Exactly(1)),
+                    RegexElement::Set('0', '9', Quantifier::Exactly(1))
+                ])
+            ], Quantifier::OneOrMany))
+
+        .then(RegexElement::Group(
+            vec![
+                RegexElement::Item('.', Quantifier::Exactly(1)),
+                RegexElement::Group(
+                    vec![
+                        RegexElement::AnyOf(vec![
+                            RegexElement::Set('a', 'z', Quantifier::Exactly(1)),
+                            RegexElement::Set('0', '9', Quantifier::Exactly(1))
+                        ])
+                    ], Quantifier::OneOrMany)
+            ], Quantifier::ZeroOrMany))
+
+        .then(RegexElement::Item('@', Quantifier::Exactly(1)))
+        .then(RegexElement::Set('a', 'z', Quantifier::OneOrMany))
+        .then(RegexElement::Item('.', Quantifier::Exactly(1)))
+        .then(RegexElement::Set('a', 'z', Quantifier::OneOrMany));
+
+    let candidate1 = &"super-mail-invalid@fake.abc".chars().collect::<Vec<char>>();
+    let candidate2 = &"hello_world@group.tld".chars().collect::<Vec<char>>();
+    let candidate3 = &"Remi.STR@yolo.com".chars().collect::<Vec<char>>();
+    let candidate4 = &"".chars().collect::<Vec<char>>();
+    let candidate5 = &"machin.truc@bidule.etc".chars().collect::<Vec<char>>();
+    let candidate6 = &"persona04.test@fake.tv".chars().collect::<Vec<char>>();
+
+    assert_eq!(regex.r#match(candidate1), false);
+    assert_eq!(regex.r#match(candidate2), false);
+    assert_eq!(regex.r#match(candidate3), false);
+    assert_eq!(regex.r#match(candidate4), false);
+    assert_eq!(regex.r#match(candidate5), true);
+    assert_eq!(regex.r#match(candidate6), true);
+
+}
