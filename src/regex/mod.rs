@@ -1,4 +1,3 @@
-
 use std::{hash::Hash, fmt::Debug};
 
 
@@ -30,7 +29,7 @@ fn match_quantifier(num:usize, quantifier:&Quantifier) -> bool{
     match quantifier {
         Quantifier::Exactly(n) => *n == num,
         Quantifier::OneOrMany => num >= 1,
-        Quantifier::ZeroOrMany => num >= 0,
+        Quantifier::ZeroOrMany => true,
         Quantifier::ZeroOrOne => num == 0 || num == 1
     }
 }
@@ -121,7 +120,7 @@ impl<T:Symbol> Regex<T>{
                     loop{
 
                         for element in elements{
-                            let mut passed = 0;
+                            let passed:usize;
                             (valid, passed) = Self::match_element(candidate.get(ind..), element);
                             
     
@@ -151,7 +150,7 @@ impl<T:Symbol> Regex<T>{
         let mut ind = 0;
 
         for element in &self.pattern{
-            let mut passed = 0;
+            let passed:usize;
             (valid, passed) = Self::match_element(candidate.get(ind..), element);
 
             if valid { ind += passed; }
