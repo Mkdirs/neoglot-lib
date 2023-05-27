@@ -2,7 +2,7 @@
 use std::{hash::Hash, fmt::Debug};
 
 
-pub trait Symbol : PartialEq+Eq+Hash+Clone+Debug{}
+pub trait Symbol : PartialEq+Eq+PartialOrd+Hash+Clone+Debug{}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Quantifier{
@@ -53,6 +53,24 @@ impl<T:Symbol> Regex<T>{
                     Quantifier::ZeroOrOne => occurences == 0 || occurences == 1
                 }, occurences)
             },
+
+            RegexElement::Set(low, high, qt) => {
+                let mut occurences = 0;
+
+                if let Some(candidate) = candidate{
+                    for c in candidate{
+                        if low <= c && c <= high { occurences+=1; } else{ break; }
+                    }
+                }
+
+                (match qt {
+                    Quantifier::Exactly(n) => *n == occurences,
+                    Quantifier::OneOrMany => occurences >= 1,
+                    Quantifier::ZeroOrMany => occurences >= 0,
+                    Quantifier::ZeroOrOne => occurences == 0 || occurences == 1
+                }, occurences)
+            },
+
             RegexElement::Group(elements, qt) => {
                 let mut valid = false;
                 let mut ind = 0;
@@ -88,8 +106,7 @@ impl<T:Symbol> Regex<T>{
                     Quantifier::ZeroOrMany => occurences >= 0,
                     Quantifier::ZeroOrOne => occurences == 0 || occurences == 1
                 }, ind)
-            },
-            RegexElement::Set(l, h, qt) => (false, 0)
+            }
         }
     }
 

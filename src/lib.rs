@@ -117,3 +117,29 @@ fn complex_test(){
     assert_eq!(regex.r#match(candidate4), true);
     assert_eq!(regex.r#match(candidate5), true);
 }
+
+#[test]
+fn snake_case(){
+    let regex = ChrRegex::new()
+        .then(RegexElement::Set('a', 'z', Quantifier::OneOrMany))
+        .then(RegexElement::Group(
+            vec![
+                RegexElement::Item('_', Quantifier::Exactly(1)),
+                RegexElement::Set('a', 'z', Quantifier::OneOrMany)
+            ], Quantifier::ZeroOrMany
+        ));
+
+    let candidate1 = &"_test".chars().collect::<Vec<char>>();
+    let candidate2 = &"10var".chars().collect::<Vec<char>>();
+    let candidate3 = &"snake_case".chars().collect::<Vec<char>>();
+    let candidate4 = &"camelCase".chars().collect::<Vec<char>>();
+    let candidate5 = &"kebab-case".chars().collect::<Vec<char>>();
+    let candidate6 = &"num#2".chars().collect::<Vec<char>>();
+
+    assert_eq!(regex.r#match(candidate1), false);
+    assert_eq!(regex.r#match(candidate2), false);
+    assert_eq!(regex.r#match(candidate3), true);
+    assert_eq!(regex.r#match(candidate4), false);
+    assert_eq!(regex.r#match(candidate5), false);
+    assert_eq!(regex.r#match(candidate6), false);
+}
