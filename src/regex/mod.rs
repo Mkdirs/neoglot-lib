@@ -4,7 +4,7 @@ use std::{hash::Hash, fmt::Debug};
 
 pub trait Symbol : PartialEq+Eq+PartialOrd+Hash+Clone+Debug{}
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub enum Quantifier{
     Exactly(usize),
     OneOrMany,
@@ -26,6 +26,17 @@ pub struct Regex<T:Symbol>{
 }
 
 
+fn match_quantifier(num:usize, quantifier:&Quantifier) -> bool{
+    match quantifier {
+        Quantifier::Exactly(n) => *n == num,
+        Quantifier::OneOrMany => num >= 1,
+        Quantifier::ZeroOrMany => num >= 0,
+        Quantifier::ZeroOrOne => num == 0 || num == 1
+    }
+}
+
+
+
 impl<T:Symbol> Regex<T>{
     pub fn new() -> Self{ Regex { pattern: vec![] } }
 
@@ -35,7 +46,7 @@ impl<T:Symbol> Regex<T>{
 
     }
 
-
+    
     fn match_element(candidate: Option<&[T]>, e:&RegexElement<T>) -> (bool, usize){
         return match e {
             RegexElement::Item(value, qt) => {
@@ -43,18 +54,24 @@ impl<T:Symbol> Regex<T>{
 
                 if let Some(candidate) = candidate {
                     for c in candidate{
-                        if value == c { occurences+=1; } else{ break; }
+                        if value == c { 
+                            occurences+=1;
+                            
+                            match qt {
+                                Quantifier::Exactly(n) => if *n == occurences { break; },
+                                Quantifier::OneOrMany => continue,
+                                Quantifier::ZeroOrMany => continue,
+                                Quantifier::ZeroOrOne => break
+                            }
+                        }
+                        else{ break; }
                         
+
                     }
                 }
 
 
-                (match qt {
-                    Quantifier::Exactly(n) => *n == occurences,
-                    Quantifier::OneOrMany => occurences >= 1,
-                    Quantifier::ZeroOrMany => occurences >= 0,
-                    Quantifier::ZeroOrOne => occurences == 0 || occurences == 1
-                }, occurences)
+                (match_quantifier(occurences, qt), occurences)
             },
 
             RegexElement::Set(low, high, qt) => {
@@ -63,17 +80,22 @@ impl<T:Symbol> Regex<T>{
                 if let Some(candidate) = candidate{
 
                     for c in candidate{
-                        if low <= c && c <= high { occurences+=1; } else{ break; }
+                        if low <= c && c <= high { 
+                            occurences+=1; 
+
+                            match qt {
+                                Quantifier::Exactly(n) => if *n == occurences { break; },
+                                Quantifier::OneOrMany => continue,
+                                Quantifier::ZeroOrMany => continue,
+                                Quantifier::ZeroOrOne => break
+                            }
+                        } 
+                        else{ break; }
                     }
                 }
                 
 
-                (match qt {
-                    Quantifier::Exactly(n) => *n == occurences,
-                    Quantifier::OneOrMany => occurences >= 1,
-                    Quantifier::ZeroOrMany => occurences >= 0,
-                    Quantifier::ZeroOrOne => occurences == 0 || occurences == 1
-                }, occurences)
+                (match_quantifier(occurences, qt), occurences)
             },
 
             RegexElement::AnyOf(elements) => {
@@ -101,6 +123,7 @@ impl<T:Symbol> Regex<T>{
                         for element in elements{
                             let mut passed = 0;
                             (valid, passed) = Self::match_element(candidate.get(ind..), element);
+                            
     
                             if valid { ind += passed; }
                             else { break; }
@@ -118,12 +141,7 @@ impl<T:Symbol> Regex<T>{
 
                 
 
-                (match qt{
-                    Quantifier::Exactly(n) => *n == occurences,
-                    Quantifier::OneOrMany => occurences >= 1,
-                    Quantifier::ZeroOrMany => occurences >= 0,
-                    Quantifier::ZeroOrOne => occurences == 0 || occurences == 1
-                }, ind)
+                (match_quantifier(occurences, qt), ind)
             }
         }
     }
