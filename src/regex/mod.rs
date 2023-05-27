@@ -15,6 +15,7 @@ pub enum Quantifier{
 pub enum  RegexElement<T:Symbol>{
     Item(T, Quantifier),
     Group(Vec<RegexElement<T>>, Quantifier),
+    AnyOf(Vec<RegexElement<T>>),
     Set(T, T, Quantifier)
 
 }
@@ -35,16 +36,17 @@ impl<T:Symbol> Regex<T>{
     }
 
 
-    fn match_t(candidate: Option<&[T]>, e:&RegexElement<T>) -> (bool, usize){
+    fn match_element(candidate: Option<&[T]>, e:&RegexElement<T>) -> (bool, usize){
         return match e {
             RegexElement::Item(value, qt) => {
                 let mut occurences = 0;
 
-                if let Some(candidate) = candidate{
+                if let Some(candidate) = candidate {
                     for c in candidate{
                         if value == c { occurences+=1; } else{ break; }
                     }
                 }
+
 
                 (match qt {
                     Quantifier::Exactly(n) => *n == occurences,
@@ -58,10 +60,12 @@ impl<T:Symbol> Regex<T>{
                 let mut occurences = 0;
 
                 if let Some(candidate) = candidate{
+
                     for c in candidate{
                         if low <= c && c <= high { occurences+=1; } else{ break; }
                     }
                 }
+                
 
                 (match qt {
                     Quantifier::Exactly(n) => *n == occurences,
@@ -71,34 +75,47 @@ impl<T:Symbol> Regex<T>{
                 }, occurences)
             },
 
+            RegexElement::AnyOf(elements) => {
+                let mut valid = false;
+                let mut passed = 0;
+
+                for element in elements{
+                    (valid, passed) = Self::match_element(candidate, element);
+
+                    if valid { break; }
+                }
+
+                (valid, passed)
+            },
+
             RegexElement::Group(elements, qt) => {
                 let mut valid = false;
                 let mut ind = 0;
                 let mut occurences = 0;
 
-                if let Some(candidate) = candidate {
-                    
+                if let Some(candidate) = candidate{
+
                     loop{
 
                         for element in elements{
                             let mut passed = 0;
-                            (valid, passed) = Self::match_t(candidate.get(ind..), element);
+                            (valid, passed) = Self::match_element(candidate.get(ind..), element);
     
                             if valid { ind += passed; }
                             else { break; }
                         }
-
+    
                         if valid { occurences += 1; }
-
-
-                        let (should_repeat, _) = Self::match_t(candidate.get(ind..), elements.get(0).unwrap());
-
-                        if !should_repeat { break; }
+    
+    
+                        let (should_repeat, passed) = Self::match_element(candidate.get(ind..), elements.get(0).unwrap());
+    
+                        if !should_repeat { break; } else if passed == 0 { break; }
     
                     }
-
-                    
                 }
+
+                
 
                 (match qt{
                     Quantifier::Exactly(n) => *n == occurences,
@@ -116,18 +133,13 @@ impl<T:Symbol> Regex<T>{
 
         for element in &self.pattern{
             let mut passed = 0;
-            (valid, passed) = Self::match_t(candidate.get(ind..), element);
+            (valid, passed) = Self::match_element(candidate.get(ind..), element);
 
             if valid { ind += passed; }
             else { break;}
         }
         
-        if valid{
-            return ind >= candidate.len();
-            
-        }
-
-        valid
+        valid && ind >= candidate.len()
     }
     
 }

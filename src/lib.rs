@@ -91,31 +91,41 @@ fn group_quantifier_test(){
     assert_eq!(regex.r#match(candidate5), true, "interruption du pattern 'aaab'");
 }
 
+
 #[test]
-fn complex_test(){
+fn number(){
     let regex = ChrRegex::new()
         .then(RegexElement::Group(
             vec![
-                RegexElement::Item('a', Quantifier::Exactly(1)),
-                RegexElement::Item('b', Quantifier::Exactly(1)),
-                RegexElement::Item('_', Quantifier::ZeroOrMany)
+                RegexElement::Item('-', Quantifier::ZeroOrOne),
+                RegexElement::Set('0', '9', Quantifier::OneOrMany)
             ], Quantifier::ZeroOrOne
         ))
-        .then(RegexElement::Item('#', Quantifier::Exactly(1)))
-        .then(RegexElement::Item('n', Quantifier::OneOrMany));
 
+        .then(RegexElement::Group(
+            vec![
+                RegexElement::Item('.', Quantifier::Exactly(1)),
+                RegexElement::Set('0', '9', Quantifier::OneOrMany)
+            ], Quantifier::ZeroOrOne
+        ));
     
-    let candidate1 = &"#".chars().collect::<Vec<char>>();
-    let candidate2 = &"#n".chars().collect::<Vec<char>>();
-    let candidate3 = &"ab".chars().collect::<Vec<char>>();
-    let candidate4 = &"ab#n".chars().collect::<Vec<char>>();
-    let candidate5 = &"ab______#nnnnnnnn".chars().collect::<Vec<char>>();
+    let candidate1 = &"".chars().collect::<Vec<char>>();
+    let candidate2 = &"testx".chars().collect::<Vec<char>>();
+    let candidate3 = &"256".chars().collect::<Vec<char>>();
+    let candidate4 = &"-145".chars().collect::<Vec<char>>();
+    let candidate5 = &"00001".chars().collect::<Vec<char>>();
+    let candidate6 = &"3.14".chars().collect::<Vec<char>>();
+    let candidate7 = &".0001".chars().collect::<Vec<char>>();
+    let candidate8 = &"-.001".chars().collect::<Vec<char>>();
 
-    assert_eq!(regex.r#match(candidate1), false);
-    assert_eq!(regex.r#match(candidate2), true);
-    assert_eq!(regex.r#match(candidate3), false);
+    assert_eq!(regex.r#match(candidate1), true);
+    assert_eq!(regex.r#match(candidate2), false);
+    assert_eq!(regex.r#match(candidate3), true);
     assert_eq!(regex.r#match(candidate4), true);
     assert_eq!(regex.r#match(candidate5), true);
+    assert_eq!(regex.r#match(candidate6), true);
+    assert_eq!(regex.r#match(candidate7), true);
+    assert_eq!(regex.r#match(candidate8), true);
 }
 
 #[test]
