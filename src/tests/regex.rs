@@ -198,4 +198,29 @@ mod test{
         assert_eq!(regex.r#match(candidate6), true);
 
     }
+
+    #[test]
+    fn negation(){
+        let regex = ChrRegex::new()
+            .then(RegexElement::NoneOf(
+                vec![
+                    RegexElement::Set('a', 'z', Quantifier::Exactly(1)),
+                    RegexElement::Set('A', 'Z', Quantifier::Exactly(1))
+                ],
+                Quantifier::OneOrMany
+            ));
+
+        let candidate1 = &"hello world".chars().collect::<Vec<char>>();
+        let candidate2 = &"SELECT * FROM GROUP".chars().collect::<Vec<char>>();
+        let candidate3 = &"{#!:->@".chars().collect::<Vec<char>>();
+        let candidate4 = &"123.547".chars().collect::<Vec<char>>();
+        let candidate5 = &"-10".chars().collect::<Vec<char>>();
+
+        assert_eq!(regex.r#match(candidate1), false);
+        assert_eq!(regex.r#match(candidate2), false);
+        assert_eq!(regex.r#match(candidate3), true);
+        assert_eq!(regex.r#match(candidate4), true);
+        assert_eq!(regex.r#match(candidate5), true);
+    }
+
 }

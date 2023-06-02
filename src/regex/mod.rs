@@ -15,6 +15,7 @@ pub enum  RegexElement<T:Symbol>{
     Item(T, Quantifier),
     Group(Vec<RegexElement<T>>, Quantifier),
     AnyOf(Vec<RegexElement<T>>),
+    NoneOf(Vec<RegexElement<T>>, Quantifier),
     Set(T, T, Quantifier)
 
 }
@@ -108,6 +109,39 @@ impl<T:Symbol> Regex<T>{
                 }
 
                 (valid, passed)
+            },
+
+            RegexElement::NoneOf(elements, qt) => {
+
+                let mut occurences = 0;
+
+                if let Some(candidate) = candidate{
+
+                    for c in candidate{
+                        let mut valid = false;
+                        for element in elements{
+                            let (matched, _) = Self::match_element(Some(&[c.clone()]), element);
+
+                            valid = !matched;
+                            if !valid { break; }
+
+                        }
+                        if valid {
+                            occurences += 1;
+
+                            match qt {
+                                Quantifier::Exactly(n) => if *n == occurences { break; },
+                                Quantifier::OneOrMany => continue,
+                                Quantifier::ZeroOrMany => continue,
+                                Quantifier::ZeroOrOne => break
+                            }
+                        }
+                        else{ break; }
+                    }
+                }
+                
+
+                (match_quantifier(occurences, qt), occurences)
             },
 
             RegexElement::Group(elements, qt) => {
