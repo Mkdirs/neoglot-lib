@@ -179,19 +179,30 @@ impl<T:Symbol> Regex<T>{
         }
     }
 
-    pub fn r#match(&self, candidate:&[T]) -> bool{
+    pub fn r#match(&self, candidate:&[T]) -> (bool, Vec<T>){
         let mut valid = false;
         let mut ind = 0;
+        let mut read:&[T] = &[];
 
         for element in &self.pattern{
             let passed:usize;
             (valid, passed) = Self::match_element(candidate.get(ind..), element);
 
-            if valid { ind += passed; }
+            if valid {
+                if let Some(slice) = candidate.get(0..ind+passed){
+                    read = slice;
+                }
+                
+                ind += passed;
+            }
             else { break;}
         }
+
+        let is_whole_expr_valid = valid && ind >= candidate.len();
+
+        if !is_whole_expr_valid { read = &[]; }
         
-        valid && ind >= candidate.len()
+        (is_whole_expr_valid, read.to_vec())
     }
     
 }
