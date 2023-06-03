@@ -1,7 +1,6 @@
 
-use crate::regex::{Quantifier, Regex, RegexElement, Symbol};
+use crate::regex::{Quantifier, Regex, RegexElement};
 
-impl Symbol for char {}
 type ChrRegex = Regex<char>;
 
 #[test]

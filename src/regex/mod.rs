@@ -1,44 +1,54 @@
 use std::{hash::Hash, fmt::Debug};
 
-/// A symbol is the smallest bit of information a regex can work with
+/// A symbol is the smallest bit of information a [regex](Regex) can work with
 /// 
-/// Implement this trait for any type you want to be supported with regex
+/// Implement this trait for any type you want to be supported with [regex](Regex)
 /// 
-/// Example
+/// # Examples
 /// ```rust
-/// impl Symbol for char {} // Now we can make regex with characters
+/// use crate::neoglot_lib::regex::Symbol;
+/// 
+/// // Implement the needed traits
+/// #[derive(PartialEq, Eq, PartialOrd, Hash, Clone, Debug)]
+/// struct Foo{
+/// }
+/// 
+/// // Now your type can be used to do regular expressions
+/// impl Symbol for Foo {}
 /// ```
 pub trait Symbol : PartialEq+Eq+PartialOrd+Hash+Clone+Debug{}
 
+impl Symbol for char{}
+
 #[derive(Debug, Clone, PartialEq, Copy)]
-/// A Quantifier is the number of occurences of a RegexElement
+/// A Quantifier is the number of occurences of a [RegexElement]
 pub enum Quantifier{
-    /// The RegexElement must have the exact amount of occurences given
+    /// The [RegexElement] must have the exact amount of occurences given
     /// 
     /// This is equivalent to '{n}'
     Exactly(usize),
 
-    /// The RegexElement must have at least one occurence
+    /// The [RegexElement] must have at least one occurence
     /// 
     /// This is equivalent to '+'
     OneOrMany,
 
-    /// The RegexElement may have several occurences or none
+    /// The [RegexElement] may have several occurences or none
     /// 
     /// This is equivalent to '*'
     ZeroOrMany,
 
-    /// The RegexElement may have one occurence or none
+    /// The [RegexElement] may have one occurence or none
     /// 
     /// This is equivalent to '?'
     ZeroOrOne
 }
 #[derive(Debug, Clone, PartialEq)]
-/// RegexElements are what make up a Regex
+/// RegexElements are what make up a [Regex]
 /// 
-/// They indicate what set of Symbols are expected
+/// They indicate what set of [Symbols](Symbol) are expected
 pub enum  RegexElement<T:Symbol>{
-    /// A single Symbol
+    /// A single [Symbol]
     Item(T, Quantifier),
 
     /// A group of other RegexElements
@@ -68,7 +78,7 @@ pub enum  RegexElement<T:Symbol>{
     /// 
     /// The second parameter is the upper end of the set
     /// 
-    /// It accepts any Symbol that is inside the set
+    /// It accepts any [Symbol] that is inside the set
     /// 
     /// This is equivalent to '[..-..]'
     Set(T, T, Quantifier)
@@ -76,7 +86,30 @@ pub enum  RegexElement<T:Symbol>{
 }
 
 #[derive(Debug)]
-/// Describes a pattern of Symbols
+/// Describes a pattern of [Symbols](Symbol)
+/// 
+/// # Examples
+/// ```rust
+/// use crate::neoglot_lib::regex::{Quantifier, Regex, RegexElement};
+/// 
+/// let regex = Regex::<char>::new()
+///         .then(RegexElement::Item('-', Quantifier::ZeroOrOne))
+///         .then(RegexElement::Set('0', '9', Quantifier::OneOrMany));
+/// 
+/// // We can use [' ', ' '] directly but i can't be bothered
+/// let candidate1 = &"  ".chars().collect::<Vec<char>>();
+/// let candidate2 = &"125".chars().collect::<Vec<char>>();
+/// let candidate3 = &"-57".chars().collect::<Vec<char>>();
+/// let candidate4 = &"-".chars().collect::<Vec<char>>();
+/// let candidate5 = &"0.78".chars().collect::<Vec<char>>();
+/// 
+/// assert_eq!(regex.r#match(candidate1), false);
+/// assert_eq!(regex.r#match(candidate2), true);
+/// assert_eq!(regex.r#match(candidate3), true);
+/// assert_eq!(regex.r#match(candidate4), false);
+/// assert_eq!(regex.r#match(candidate5), false);
+/// 
+/// ```
 pub struct Regex<T:Symbol>{
     pattern:Vec<RegexElement<T>>
 }
@@ -232,7 +265,7 @@ impl<T:Symbol> Regex<T>{
     /// Creates a new Regex
     pub fn new() -> Self{ Regex { pattern: vec![] } }
 
-    ///Adds an element to the regex
+    ///Adds an [element](RegexElement) to the regex
     pub fn then(mut self, e:RegexElement<T>) -> Self{
         self.pattern.push(e);
         self
@@ -240,7 +273,7 @@ impl<T:Symbol> Regex<T>{
     }
 
 
-    /// Verifies if a set of Symbols match the pattern of this regex
+    /// Verifies if a set of [Symbols](Symbol) match the pattern of this regex
     pub fn r#match(&self, candidate:&[T]) -> bool{
         let mut valid = false;
         let mut ind = 0;
