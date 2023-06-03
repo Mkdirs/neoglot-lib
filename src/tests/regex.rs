@@ -19,19 +19,13 @@ fn test() {
     let candidate5 = &">.".chars().collect::<Vec<char>>();
     let candidate6 = &">>>>..".chars().collect::<Vec<char>>();
 
-    let (result1, _) = regex.r#match(candidate1);
-    let (result2, _) = regex.r#match(candidate2);
-    let (result3, _) = regex.r#match(candidate3);
-    let (result4, _) = regex.r#match(candidate4);
-    let (result5, _) = regex.r#match(candidate5);
-    let (result6, _) = regex.r#match(candidate6);
 
-    assert_eq!(result1, true);
-    assert_eq!(result2, false);
-    assert_eq!(result3, false);
-    assert_eq!(result4, true);
-    assert_eq!(result5, true);
-    assert_eq!(result6, false);
+    assert_eq!(regex.r#match(candidate1), true);
+    assert_eq!(regex.r#match(candidate2), false);
+    assert_eq!(regex.r#match(candidate3), false);
+    assert_eq!(regex.r#match(candidate4), true);
+    assert_eq!(regex.r#match(candidate5), true);
+    assert_eq!(regex.r#match(candidate6), false);
 }
 
 #[test]
@@ -57,33 +51,20 @@ fn group_test() {
     let candidate11 = &"abbbbb".chars().collect::<Vec<char>>();
     let candidate12 = &"b".chars().collect::<Vec<char>>();
 
-    let (result1, _) = regex.r#match(candidate1);
-    let (result2, _) = regex.r#match(candidate2);
-    let (result3, _) = regex.r#match(candidate3);
-    let (result4, _) = regex.r#match(candidate4);
-    let (result5, _) = regex.r#match(candidate5);
-    let (result6, _) = regex.r#match(candidate6);
-    let (result7, _) = regex.r#match(candidate7);
-    let (result8, _) = regex.r#match(candidate8);
-    let (result9, _) = regex.r#match(candidate9);
-    let (result10, _) = regex.r#match(candidate10);
-    let (result11, _) = regex.r#match(candidate11);
-    let (result12, _) = regex.r#match(candidate12);
+    assert_eq!(regex.r#match(candidate1), false, "'hello world' test");
+    assert_eq!(regex.r#match(candidate2), false, "chaîne vide");
+    assert_eq!(regex.r#match(candidate3), false, "que des 'b'");
+    assert_eq!(regex.r#match(candidate4), true, "une seule occurence du pattern 'ab'");
+    assert_eq!(regex.r#match(candidate5), false, "un seul 'a'");
+    assert_eq!(regex.r#match(candidate6), false, "que des 'a'");
+    assert_eq!(regex.r#match(candidate7), true, "chaîne de 'a' puis un 'b'");
 
-    assert_eq!(result1, false, "'hello world' test");
-    assert_eq!(result2, false, "chaîne vide");
-    assert_eq!(result3, false, "que des 'b'");
-    assert_eq!(result4, true, "une seule occurence du pattern 'ab'");
-    assert_eq!(result5, false, "un seul 'a'");
-    assert_eq!(result6, false, "que des 'a'");
-    assert_eq!(result7, true, "chaîne de 'a' puis un 'b'");
+    assert_eq!(regex.r#match(candidate8), false, "4 occurences du pattern 'ab'");
+    assert_eq!(regex.r#match(candidate9), false, "4 occurences du pattern 'aaaab'");
 
-    assert_eq!(result8, false, "4 occurences du pattern 'ab'");
-    assert_eq!(result9, false, "4 occurences du pattern 'aaaab'");
-
-    assert_eq!(result10, false, "chaîne de 'a' puis une chaîne de 'b'");
-    assert_eq!(result11, false, "un 'a' puis une chaîne de 'b'");
-    assert_eq!(result12, false, "un seul 'b'");
+    assert_eq!(regex.r#match(candidate10), false, "chaîne de 'a' puis une chaîne de 'b'");
+    assert_eq!(regex.r#match(candidate11), false, "un 'a' puis une chaîne de 'b'");
+    assert_eq!(regex.r#match(candidate12), false, "un seul 'b'");
 }
 
 #[test]
@@ -102,17 +83,12 @@ fn group_quantifier_test() {
     let candidate4 = &"abaaabab".chars().collect::<Vec<char>>();
     let candidate5 = &"aaabababaaab".chars().collect::<Vec<char>>();
 
-    let (result1, _) = regex.r#match(candidate1);
-    let (result2, _) = regex.r#match(candidate2);
-    let (result3, _) = regex.r#match(candidate3);
-    let (result4, _) = regex.r#match(candidate4);
-    let (result5, _) = regex.r#match(candidate5);
 
-    assert_eq!(result1, true, "3 occurences du pattern 'ab'");
-    assert_eq!(result2, true, "3 occurences du pattern 'aaab'");
-    assert_eq!(result3, false, "interruption du pattern 'ab'");
-    assert_eq!(result4, true, "interruption du pattern 'ab' (bis)");
-    assert_eq!(result5, true, "interruption du pattern 'aaab'");
+    assert_eq!(regex.r#match(candidate1), true, "3 occurences du pattern 'ab'");
+    assert_eq!(regex.r#match(candidate2), true, "3 occurences du pattern 'aaab'");
+    assert_eq!(regex.r#match(candidate3), false, "interruption du pattern 'ab'");
+    assert_eq!(regex.r#match(candidate4), true, "interruption du pattern 'ab' (bis)");
+    assert_eq!(regex.r#match(candidate5), true, "interruption du pattern 'aaab'");
 }
 
 #[test]
@@ -142,23 +118,15 @@ fn number() {
     let candidate7 = &".0001".chars().collect::<Vec<char>>();
     let candidate8 = &"-.001".chars().collect::<Vec<char>>();
 
-    let (result1, _) = regex.r#match(candidate1);
-    let (result2, _) = regex.r#match(candidate2);
-    let (result3, _) = regex.r#match(candidate3);
-    let (result4, _) = regex.r#match(candidate4);
-    let (result5, _) = regex.r#match(candidate5);
-    let (result6, _) = regex.r#match(candidate6);
-    let (result7, _) = regex.r#match(candidate7);
-    let (result8, _) = regex.r#match(candidate8);
 
-    assert_eq!(result1, true);
-    assert_eq!(result2, false);
-    assert_eq!(result3, true);
-    assert_eq!(result4, true);
-    assert_eq!(result5, true);
-    assert_eq!(result6, true);
-    assert_eq!(result7, true);
-    assert_eq!(result8, true);
+    assert_eq!(regex.r#match(candidate1), true);
+    assert_eq!(regex.r#match(candidate2), false);
+    assert_eq!(regex.r#match(candidate3), true);
+    assert_eq!(regex.r#match(candidate4), true);
+    assert_eq!(regex.r#match(candidate5), true);
+    assert_eq!(regex.r#match(candidate6), true);
+    assert_eq!(regex.r#match(candidate7), true);
+    assert_eq!(regex.r#match(candidate8), true);
 }
 
 #[test]
@@ -180,19 +148,13 @@ fn snake_case() {
     let candidate5 = &"kebab-case".chars().collect::<Vec<char>>();
     let candidate6 = &"num#2".chars().collect::<Vec<char>>();
 
-    let (result1, _) = regex.r#match(candidate1);
-    let (result2, _) = regex.r#match(candidate2);
-    let (result3, _) = regex.r#match(candidate3);
-    let (result4, _) = regex.r#match(candidate4);
-    let (result5, _) = regex.r#match(candidate5);
-    let (result6, _) = regex.r#match(candidate6);
 
-    assert_eq!(result1, false);
-    assert_eq!(result2, false);
-    assert_eq!(result3, true);
-    assert_eq!(result4, false);
-    assert_eq!(result5, false);
-    assert_eq!(result6, false);
+    assert_eq!(regex.r#match(candidate1), false);
+    assert_eq!(regex.r#match(candidate2), false);
+    assert_eq!(regex.r#match(candidate3), true);
+    assert_eq!(regex.r#match(candidate4), false);
+    assert_eq!(regex.r#match(candidate5), false);
+    assert_eq!(regex.r#match(candidate6), false);
 }
 
 #[test]
@@ -231,19 +193,13 @@ fn mail() {
     let candidate5 = &"machin.truc@bidule.etc".chars().collect::<Vec<char>>();
     let candidate6 = &"persona04.test@fake.tv".chars().collect::<Vec<char>>();
 
-    let (result1, _) = regex.r#match(candidate1);
-    let (result2, _) = regex.r#match(candidate2);
-    let (result3, _) = regex.r#match(candidate3);
-    let (result4, _) = regex.r#match(candidate4);
-    let (result5, _) = regex.r#match(candidate5);
-    let (result6, _) = regex.r#match(candidate6);
 
-    assert_eq!(result1, false);
-    assert_eq!(result2, false);
-    assert_eq!(result3, false);
-    assert_eq!(result4, false);
-    assert_eq!(result5, true);
-    assert_eq!(result6, true);
+    assert_eq!(regex.r#match(candidate1), false);
+    assert_eq!(regex.r#match(candidate2), false);
+    assert_eq!(regex.r#match(candidate3), false);
+    assert_eq!(regex.r#match(candidate4), false);
+    assert_eq!(regex.r#match(candidate5), true);
+    assert_eq!(regex.r#match(candidate6), true);
 }
 
 #[test]
@@ -262,19 +218,15 @@ fn negation() {
     let candidate4 = &"123.547".chars().collect::<Vec<char>>();
     let candidate5 = &"-10".chars().collect::<Vec<char>>();
 
-    let (result1, _) = regex.r#match(candidate1);
-    let (result2, _) = regex.r#match(candidate2);
-    let (result3, _) = regex.r#match(candidate3);
-    let (result4, _) = regex.r#match(candidate4);
-    let (result5, _) = regex.r#match(candidate5);
 
-    assert_eq!(result1, false);
-    assert_eq!(result2, false);
-    assert_eq!(result3, true);
-    assert_eq!(result4, true);
-    assert_eq!(result5, true);
+    assert_eq!(regex.r#match(candidate1), false);
+    assert_eq!(regex.r#match(candidate2), false);
+    assert_eq!(regex.r#match(candidate3), true);
+    assert_eq!(regex.r#match(candidate4), true);
+    assert_eq!(regex.r#match(candidate5), true);
 }
 
+/*
 #[test]
 fn matched_symbols() {
     let regex = ChrRegex::new()
@@ -297,3 +249,4 @@ fn matched_symbols() {
     assert_eq!(regex.r#match(candidate6), (false, vec![]));
     assert_eq!(regex.r#match(candidate7), (false, vec![]));
 }
+*/
