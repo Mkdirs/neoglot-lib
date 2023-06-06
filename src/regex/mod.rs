@@ -103,11 +103,26 @@ pub enum  RegexElement<T:Symbol>{
 /// let candidate4 = &"-".chars().collect::<Vec<char>>();
 /// let candidate5 = &"0.78".chars().collect::<Vec<char>>();
 /// 
+/// // Simple matching of a pattern
 /// assert_eq!(regex.r#match(candidate1), false);
 /// assert_eq!(regex.r#match(candidate2), true);
 /// assert_eq!(regex.r#match(candidate3), true);
 /// assert_eq!(regex.r#match(candidate4), false);
 /// assert_eq!(regex.r#match(candidate5), false);
+/// 
+/// let result1:(&[char], &[char]) = (&[], &[' ', ' ']);
+/// let result2:(&[char], &[char]) = (&['1', '2', '5'], &[]);
+/// let result3:(&[char], &[char]) = (&['-', '5', '7'], &[]);
+/// let result4:(&[char], &[char]) = (&['-'], &[]);
+/// let result5:(&[char], &[char]) = (&['0'], &['.', '7', '8']);
+/// 
+/// // Taking the first matching symbols and the rest
+/// // This is usefull for dismantling a large set of symbols into token for instance
+/// assert_eq!(regex.split_first(candidate1), result1);
+/// assert_eq!(regex.split_first(candidate2), result2);
+/// assert_eq!(regex.split_first(candidate3), result3);
+/// assert_eq!(regex.split_first(candidate4), result4);
+/// assert_eq!(regex.split_first(candidate5), result5);
 /// 
 /// ```
 pub struct Regex<T:Symbol>{
@@ -287,6 +302,26 @@ impl<T:Symbol> Regex<T>{
         }
 
         valid && ind >= candidate.len()
+    }
+
+    /// Splits a set of [symbols](Symbol) into two:
+    /// the first matched [symbols](Symbol)
+    /// and the rest
+    pub fn split_first<'a>(&self, candidate: &'a[T]) -> (&'a [T], &'a [T]){
+        let mut ind = 0;
+
+        for element in &self.pattern {
+            let (valid, passed) = match_element(candidate.get(ind..), element);
+
+            if valid { ind += passed; }
+            else{ break; }
+        }
+
+
+        let (matched, others) = candidate.split_at(ind);
+
+        (matched, others)
+
     }
     
 }

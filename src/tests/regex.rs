@@ -225,7 +225,7 @@ fn negation() {
     assert_eq!(regex.r#match(candidate5), true);
 }
 
-/*
+
 #[test]
 fn matched_symbols() {
     let regex = ChrRegex::new()
@@ -240,12 +240,19 @@ fn matched_symbols() {
     let candidate6 = &"0.78".chars().collect::<Vec<char>>();
     let candidate7 = &"hello world".chars().collect::<Vec<char>>();
 
-    assert_eq!(regex.r#match(candidate1), (false, vec![]));
-    assert_eq!(regex.r#match(candidate2), (false, vec![]));
-    assert_eq!(regex.r#match(candidate3), (true, vec!['1', '2', '5']));
-    assert_eq!(regex.r#match(candidate4), (true, vec!['-', '5', '7']));
-    assert_eq!(regex.r#match(candidate5), (false, vec![]));
-    assert_eq!(regex.r#match(candidate6), (false, vec![]));
-    assert_eq!(regex.r#match(candidate7), (false, vec![]));
+    let result1:(&[char], &[char]) = (&[], &[]);
+    let result2:(&[char], &[char]) = (&[], &[' ', ' ']);
+    let result3:(&[char], &[char]) = (&['1', '2', '5'], &[]);
+    let result4:(&[char], &[char]) = (&['-', '5', '7'], &[]);
+    let result5:(&[char], &[char]) = (&['-'], &[]);
+    let result6:(&[char], &[char]) = (&['0'], &['.', '7', '8']);
+    let result7:(&[char], &[char]) = (&[], &['h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd']);
+
+    assert_eq!(regex.split_first(candidate1), result1);
+    assert_eq!(regex.split_first(candidate2), result2);
+    assert_eq!(regex.split_first(candidate3), result3);
+    assert_eq!(regex.split_first(candidate4), result4);
+    assert_eq!(regex.split_first(candidate5), result5);
+    assert_eq!(regex.split_first(candidate6), result6);
+    assert_eq!(regex.split_first(candidate7), result7);
 }
-*/
