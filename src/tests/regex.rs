@@ -244,7 +244,7 @@ fn matched_symbols() {
     let result2:(&[char], &[char]) = (&[], &[' ', ' ']);
     let result3:(&[char], &[char]) = (&['1', '2', '5'], &[]);
     let result4:(&[char], &[char]) = (&['-', '5', '7'], &[]);
-    let result5:(&[char], &[char]) = (&['-'], &[]);
+    let result5:(&[char], &[char]) = (&[], &['-']);
     let result6:(&[char], &[char]) = (&['0'], &['.', '7', '8']);
     let result7:(&[char], &[char]) = (&[], &['h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd']);
 

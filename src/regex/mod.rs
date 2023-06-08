@@ -113,7 +113,7 @@ pub enum  RegexElement<T:Symbol>{
 /// let result1:(&[char], &[char]) = (&[], &[' ', ' ']);
 /// let result2:(&[char], &[char]) = (&['1', '2', '5'], &[]);
 /// let result3:(&[char], &[char]) = (&['-', '5', '7'], &[]);
-/// let result4:(&[char], &[char]) = (&['-'], &[]);
+/// let result4:(&[char], &[char]) = (&[], &['-']);
 /// let result5:(&[char], &[char]) = (&['0'], &['.', '7', '8']);
 /// 
 /// // Taking the first matching symbols and the rest
@@ -304,18 +304,23 @@ impl<T:Symbol> Regex<T>{
         valid && ind >= candidate.len()
     }
 
+
     /// Splits a set of [symbols](Symbol) into two:
     /// the first matched [symbols](Symbol)
     /// and the rest
     pub fn split_first<'a>(&self, candidate: &'a[T]) -> (&'a [T], &'a [T]){
         let mut ind = 0;
+        let mut valid = false;
 
         for element in &self.pattern {
-            let (valid, passed) = match_element(candidate.get(ind..), element);
+            let passed:usize;
+            (valid, passed) = match_element(candidate.get(ind..), element);
 
             if valid { ind += passed; }
             else{ break; }
         }
+
+        if !valid { return (&[], candidate); }
 
 
         let (matched, others) = candidate.split_at(ind);

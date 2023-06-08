@@ -5,5 +5,8 @@
 /// Build regular expressions with any types you want
 pub mod regex;
 
+pub mod lexer;
+
 #[cfg(test)]
 mod tests;
+
