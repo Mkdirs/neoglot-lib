@@ -1,12 +1,12 @@
-use std::{fmt::Display, error::Error, path::Path, fs};
+use std::{fmt::Display, error::Error, path::{Path, PathBuf}, fs};
 
 use crate::regex::Regex;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Location {
-    file: std::path::PathBuf,
-    line: usize,
-    column: usize
+    pub file: std::path::PathBuf,
+    pub line: usize,
+    pub column: usize
 }
 
 impl Location{
@@ -16,11 +16,11 @@ impl Location{
 
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Token<Kind:PartialEq+Copy> {
-    location: Location,
-    kind: Kind, 
-    literal: String
+    pub location: Location,
+    pub kind: Kind, 
+    pub literal: String
 }
 
 pub struct Lexernode<Kind:PartialEq+Copy> {
@@ -32,20 +32,20 @@ pub struct Lexernode<Kind:PartialEq+Copy> {
 impl<Kind:PartialEq+Copy> Lexernode<Kind>{
     pub fn new(regex: Regex<char>, kind:Kind) -> Self{ Lexernode{ regex, kind} }
 
-    pub fn tokenize<'a>(&self, c:&'a [char], location: Location) -> (&'a [char], Option<Token<Kind>>){
+    pub fn tokenize<'a>(&self, c:&'a [char], location: &Location) -> (&'a [char], Option<Token<Kind>>){
         let (matched, others) = self.regex.split_first(c);
         let token = if matched.is_empty() { None } else {
             let literal = matched.iter().collect::<String>();
-            Some(Token{ location, kind: self.kind, literal})
+            Some(Token{ location: location.clone(), kind: self.kind, literal})
         };
 
         (others, token)
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct LexingError{
-    location: Location
+    pub location: Location
 }
 
 impl Display for LexingError{
@@ -70,22 +70,19 @@ impl<Kind: PartialEq+Copy> Lexer<Kind>{
         self.nodes.push(node);
     }
 
-    pub fn tokenize(&self, path: &Path) -> Result<Vec<Token<Kind>>, LexingError>{
+    pub fn tokenize_content(&self, content:String, path:Option<PathBuf>) -> Result<Vec<Token<Kind>>, LexingError>{
         let mut tokens:Vec<Token<Kind>> = vec![];
-        let content = fs::read_to_string(path);
-        let mut location = Location { file: path.to_path_buf(), line: 0, column: 0 };
-
-        if content.is_err() { return Err(LexingError { location }) }
+        let mut location = Location { file: path.unwrap_or(Path::new("virtual_file").to_path_buf()) , line: 0, column: 0 };
 
 
 
-        for line_content in content.unwrap().lines() {
+        for line_content in content.lines() {
             let mut stream = line_content.chars().collect::<Vec<char>>();
 
             while !stream.is_empty(){
                 let mut matched = false;
                 for node in &self.nodes{
-                    let (others, result) = node.tokenize(&stream, location.clone());
+                    let (others, result) = node.tokenize(&stream, &location);
     
                     if let Some(token) = result{
                         location.column(location.column + token.literal.len());
@@ -113,5 +110,16 @@ impl<Kind: PartialEq+Copy> Lexer<Kind>{
         }
 
         Ok(tokens)
+    }
+
+    pub fn tokenize_file(&self, path: &Path) -> Result<Vec<Token<Kind>>, LexingError>{
+        let content = fs::read_to_string(path);
+        let location = Location { file: path.to_path_buf(), line: 0, column: 0 };
+
+        if content.is_err() { return Err(LexingError { location }) }
+
+        self.tokenize_content(content.unwrap(), Some(path.to_path_buf()))
+
+        
     }
 }

@@ -1,1 +1,2 @@
 mod regex;
+mod lexer;
