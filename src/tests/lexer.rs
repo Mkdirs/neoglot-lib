@@ -1,4 +1,4 @@
-use std::path::{PathBuf, Path};
+use std::path::Path;
 
 use crate::{lexer::*, regex::*};
 
@@ -13,7 +13,7 @@ enum TokenType{
 
 #[test]
 fn node_lexing(){
-    let node = Lexernode::new(
+    let node = LexerNode::new(
         Regex::<char>::new().then(RegexElement::Set('0', '9', Quantifier::OneOrMany)),
         TokenType::UINT
     );
@@ -44,27 +44,27 @@ fn node_lexing(){
 fn file_lexing(){
     let mut lexer = Lexer::<TokenType>::new();
 
-    let uint_node = Lexernode::new(
+    let uint_node = LexerNode::new(
         Regex::new().then(RegexElement::Set('0', '9', Quantifier::OneOrMany)),
         TokenType::UINT
     );
 
-    let plus_node = Lexernode::new(
+    let plus_node = LexerNode::new(
         Regex::new().then(RegexElement::Item('+', Quantifier::Exactly(1))),
         TokenType::PLUS
     );
 
-    let minus_node = Lexernode::new(
+    let minus_node = LexerNode::new(
         Regex::new().then(RegexElement::Item('-', Quantifier::Exactly(1))),
         TokenType::MINUS
     );
 
-    let times_node = Lexernode::new(
+    let times_node = LexerNode::new(
         Regex::new().then(RegexElement::Item('*', Quantifier::Exactly(1))),
         TokenType::TIMES
     );
 
-    let divide_node = Lexernode::new(
+    let divide_node = LexerNode::new(
         Regex::new().then(RegexElement::Item('/', Quantifier::Exactly(1))),
         TokenType::DIVIDE
     );

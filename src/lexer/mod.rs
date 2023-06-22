@@ -3,6 +3,7 @@ use std::{fmt::Display, error::Error, path::{Path, PathBuf}, fs};
 use crate::regex::Regex;
 
 #[derive(Debug, Clone, PartialEq)]
+/// The location of a [token](Token) in a file
 pub struct Location {
     pub file: std::path::PathBuf,
     pub line: usize,
@@ -17,21 +18,68 @@ impl Location{
 
 
 #[derive(Debug, PartialEq)]
+/// A token is a lexical unit produced by a [Lexer]
+/// 
+/// Ex: an integer, punctuation, variable names...
+/// 
+/// [location](Location) is where the token is in a file
+/// 
+/// kind is a generic type representing the type of a token (integer, float, keword...)
+/// 
+/// literal is the value held by the token
 pub struct Token<Kind:PartialEq+Copy> {
     pub location: Location,
     pub kind: Kind, 
     pub literal: String
 }
 
-pub struct Lexernode<Kind:PartialEq+Copy> {
+/// A LexerNode match a set of characters into one type of [token](Token)
+/// 
+/// [regex](Regex) is the matching sequence
+/// 
+/// kind is the generic type representing the type of token to work with
+/// 
+/// # Exemples
+/// ```rust
+/// use crate::neoglot_lib::{lexer::*, regex::*};
+/// use std::path::Path;
+/// 
+/// #[derive(PartialEq, Copy, Clone, Debug)]
+/// enum TokenType{
+///     UInt
+/// }
+/// 
+/// let uint_node = LexerNode::new(
+///     Regex::new().then(RegexElement::Set('0', '9', Quantifier::OneOrMany)),
+///     TokenType::UInt
+/// );
+/// 
+/// let location = Location{ file: Path::new("virtual_file").to_path_buf(), line:0, column:0};
+/// 
+/// let candidate1 = "25+ world".chars().collect::<Vec<char>>();
+/// let candidate2 = "#test".chars().collect::<Vec<char>>();
+/// 
+/// let result1:(&[char], Option<Token<TokenType>>) = (&['+', ' ', 'w', 'o', 'r', 'l', 'd'], Some(Token{ location: location.clone(), kind:TokenType::UInt, literal:String::from("25") }));
+/// 
+/// let result2:(&[char], Option<Token<TokenType>>) = (&['#', 't', 'e', 's', 't'], None);
+/// 
+/// 
+/// assert_eq!(uint_node.tokenize(&candidate1, &location), result1);
+/// assert_eq!(uint_node.tokenize(&candidate2, &location), result2);
+/// 
+/// ```
+pub struct LexerNode<Kind:PartialEq+Copy> {
     regex: Regex<char>,
     kind: Kind
 
 }
 
-impl<Kind:PartialEq+Copy> Lexernode<Kind>{
-    pub fn new(regex: Regex<char>, kind:Kind) -> Self{ Lexernode{ regex, kind} }
+impl<Kind:PartialEq+Copy> LexerNode<Kind>{
+    pub fn new(regex: Regex<char>, kind:Kind) -> Self{ LexerNode{ regex, kind} }
 
+    /// This function tries to construct the first token that match the matching sequence
+    /// 
+    /// It returns the rest of the unread characters and the [token](Token) that was found which can be [None] if no [token](Token) was found
     pub fn tokenize<'a>(&self, c:&'a [char], location: &Location) -> (&'a [char], Option<Token<Kind>>){
         let (matched, others) = self.regex.split_first(c);
         let token = if matched.is_empty() { None } else {
@@ -44,6 +92,7 @@ impl<Kind:PartialEq+Copy> Lexernode<Kind>{
 }
 
 #[derive(Debug, PartialEq)]
+/// Error type for the lexing process
 pub struct LexingError{
     pub location: Location
 }
@@ -54,22 +103,68 @@ impl Display for LexingError{
     }
 }
 
+impl Error for LexingError{}
 
-impl Error for LexingError{
-    
-}
-
+/// The Lexer performs a lexical analysis on characters and extract the [tokens](Token)
+/// 
+/// # Exemples
+/// ```rust
+/// use crate::neoglot_lib::{lexer::*, regex::*};
+/// use std::path::{Path, PathBuf};
+/// 
+/// #[derive(PartialEq, Copy, Clone, Debug)]
+/// enum TokenType{
+///     UInt, Plus
+/// }
+/// 
+/// let uint_node = LexerNode::new(
+///     Regex::new().then(RegexElement::Set('0', '9', Quantifier::OneOrMany)),
+///     TokenType::UInt
+/// );
+/// 
+/// let plus_node = LexerNode::new(
+///     Regex::new().then(RegexElement::Item('+', Quantifier::Exactly(1))),
+///     TokenType::Plus
+/// );
+/// 
+/// let mut lexer = Lexer::<TokenType>::new();
+/// lexer.register(uint_node);
+/// lexer.register(plus_node);
+/// 
+/// let result = lexer.tokenize_content(String::from("10 +   25"), None);
+/// let location = Location{ file: Path::new("virtual_file").to_path_buf(), line:0, column:0};
+/// 
+/// assert!(result.is_ok());
+/// assert_eq!(result.unwrap(), vec![
+///     Token{ location: location.clone(), kind:TokenType::UInt, literal:String::from("10") },
+/// 
+///     Token{ location: Location{ file: Path::new("virtual_file").to_path_buf(), line:0, column:3 },
+///         kind: TokenType::Plus, literal:String::from("+")
+///     },
+/// 
+///     Token{ location: Location{ file: Path::new("virtual_file").to_path_buf(), line:0, column:7 },
+///         kind: TokenType::UInt, literal: String::from("25")
+///     }
+/// ]);
+/// 
+/// ```
 pub struct Lexer<Kind:PartialEq+Copy>{
-    nodes: Vec<Lexernode<Kind>>
+    nodes: Vec<LexerNode<Kind>>
 }
 
 impl<Kind: PartialEq+Copy> Lexer<Kind>{
     pub fn new() -> Self {Lexer { nodes: vec![] }}
 
-    pub fn register(&mut self, node: Lexernode<Kind>) {
+    /// Adds a [LexerNode] to this Lexer
+    pub fn register(&mut self, node: LexerNode<Kind>) {
         self.nodes.push(node);
     }
 
+    /// Extracts the [tokens](Token) from a [String]
+    /// 
+    /// content: The source [String] to extract the [tokens](Token) from
+    /// 
+    /// [path](Option<PathBuf>): The [path](PathBuf) to the file where content was taken, or [None] if it is irrelevent
     pub fn tokenize_content(&self, content:String, path:Option<PathBuf>) -> Result<Vec<Token<Kind>>, LexingError>{
         let mut tokens:Vec<Token<Kind>> = vec![];
         let mut location = Location { file: path.unwrap_or(Path::new("virtual_file").to_path_buf()) , line: 0, column: 0 };
@@ -83,7 +178,10 @@ impl<Kind: PartialEq+Copy> Lexer<Kind>{
                 let mut matched = false;
                 for node in &self.nodes{
                     let (others, result) = node.tokenize(&stream, &location);
-    
+                    
+                    // If a token was found, add it to the list
+                    // and updates location to the start of the next token
+
                     if let Some(token) = result{
                         location.column(location.column + token.literal.len());
                         tokens.push(token);
@@ -93,17 +191,21 @@ impl<Kind: PartialEq+Copy> Lexer<Kind>{
                 }
 
                 if !matched && stream[0].is_whitespace(){
+                    // If no token was found and the current character is a whitespace
+                    // Go to the next character
                     stream.remove(0);
                     location.column(location.column + 1);
                 }
                 else if !matched {
+                    // Could not recognize the token
+                    // return an error
                     return Err(LexingError { location });
                 }
             }
             
 
             
-
+            // Updates location to the start of the next line
             location.line(location.line + 1);
             location.column(0);
 
@@ -112,10 +214,14 @@ impl<Kind: PartialEq+Copy> Lexer<Kind>{
         Ok(tokens)
     }
 
+    /// Extracts the [tokens](Token) from a file
+    /// 
+    /// [path](Path): The path to the file to extract the [tokens](Token) from
     pub fn tokenize_file(&self, path: &Path) -> Result<Vec<Token<Kind>>, LexingError>{
         let content = fs::read_to_string(path);
         let location = Location { file: path.to_path_buf(), line: 0, column: 0 };
 
+        // Could not read the file
         if content.is_err() { return Err(LexingError { location }) }
 
         self.tokenize_content(content.unwrap(), Some(path.to_path_buf()))
