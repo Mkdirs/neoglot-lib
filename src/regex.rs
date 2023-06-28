@@ -1,5 +1,6 @@
 use std::{hash::Hash, fmt::Debug};
 
+
 /// A symbol is the smallest bit of information a [regex](Regex) can work with
 /// 
 /// Implement this trait for any type you want to be supported with [regex](Regex)

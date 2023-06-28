@@ -1,6 +1,6 @@
 use std::{fmt::Display, error::Error, path::{Path, PathBuf}, fs};
 
-use crate::regex::Regex;
+use crate::regex::{Regex, self};
 
 #[derive(Debug, Clone, PartialEq)]
 /// The location of a [token](Token) in a file
@@ -15,21 +15,22 @@ impl Location{
     pub fn column(&mut self, col:usize){ self.column = col; }
 }
 
+/// A trait representing the type of a [token](Token) (integer, float, keword...)
+pub trait TokenKind : Copy+regex::Symbol{}
 
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 /// A token is a lexical unit produced by a [Lexer]
 /// 
 /// Ex: an integer, punctuation, variable names...
 /// 
 /// [location](Location) is where the token is in a file
 /// 
-/// kind is a generic type representing the type of a token (integer, float, keword...)
+/// [kind](TokenKind) the type of this token
 /// 
 /// literal is the value held by the token
-pub struct Token<Kind:PartialEq+Copy> {
+pub struct Token<TokenKind> {
     pub location: Location,
-    pub kind: Kind, 
+    pub kind: TokenKind, 
     pub literal: String
 }
 
@@ -37,17 +38,20 @@ pub struct Token<Kind:PartialEq+Copy> {
 /// 
 /// [regex](Regex) is the matching sequence
 /// 
-/// kind is the generic type representing the type of token to work with
+/// [kind](TokenKind) the type of tokens to work with
 /// 
 /// # Exemples
 /// ```rust
 /// use crate::neoglot_lib::{lexer::*, regex::*};
 /// use std::path::Path;
 /// 
-/// #[derive(PartialEq, Copy, Clone, Debug)]
+/// #[derive(PartialEq, PartialOrd, Hash, Eq, Copy, Clone, Debug)]
 /// enum TokenType{
 ///     UInt
 /// }
+/// 
+/// impl Symbol for TokenType{}
+/// impl TokenKind for TokenType{}
 /// 
 /// let uint_node = LexerNode::new(
 ///     Regex::new().then(RegexElement::Set('0', '9', Quantifier::OneOrMany)),
@@ -68,13 +72,13 @@ pub struct Token<Kind:PartialEq+Copy> {
 /// assert_eq!(uint_node.tokenize(&candidate2, &location), result2);
 /// 
 /// ```
-pub struct LexerNode<Kind:PartialEq+Copy> {
+pub struct LexerNode<Kind:TokenKind> {
     regex: Regex<char>,
     kind: Kind
 
 }
 
-impl<Kind:PartialEq+Copy> LexerNode<Kind>{
+impl<Kind:TokenKind> LexerNode<Kind>{
     pub fn new(regex: Regex<char>, kind:Kind) -> Self{ LexerNode{ regex, kind} }
 
     /// This function tries to construct the first token that match the matching sequence
@@ -112,10 +116,13 @@ impl Error for LexingError{}
 /// use crate::neoglot_lib::{lexer::*, regex::*};
 /// use std::path::{Path, PathBuf};
 /// 
-/// #[derive(PartialEq, Copy, Clone, Debug)]
+/// #[derive(PartialEq, PartialOrd, Eq, Copy, Clone, Debug, Hash)]
 /// enum TokenType{
 ///     UInt, Plus
 /// }
+/// 
+/// impl Symbol for TokenType{}
+/// impl TokenKind for TokenType{}
 /// 
 /// let uint_node = LexerNode::new(
 ///     Regex::new().then(RegexElement::Set('0', '9', Quantifier::OneOrMany)),
@@ -148,11 +155,11 @@ impl Error for LexingError{}
 /// ]);
 /// 
 /// ```
-pub struct Lexer<Kind:PartialEq+Copy>{
+pub struct Lexer<Kind:TokenKind>{
     nodes: Vec<LexerNode<Kind>>
 }
 
-impl<Kind: PartialEq+Copy> Lexer<Kind>{
+impl<Kind: TokenKind> Lexer<Kind>{
     pub fn new() -> Self {Lexer { nodes: vec![] }}
 
     /// Adds a [LexerNode] to this Lexer

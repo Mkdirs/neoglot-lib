@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::{lexer::*, regex::*};
 
-#[derive(PartialEq, Copy, Clone, Debug)]
+#[derive(PartialEq, PartialOrd, Eq, Hash, Copy, Clone, Debug)]
 enum TokenType{
     UINT,
     PLUS,
@@ -10,6 +10,9 @@ enum TokenType{
     TIMES,
     DIVIDE
 }
+
+impl Symbol for TokenType{}
+impl TokenKind for TokenType{}
 
 #[test]
 fn node_lexing(){

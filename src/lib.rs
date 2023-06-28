@@ -10,6 +10,8 @@ pub mod regex;
 /// Extract tokens from files
 pub mod lexer;
 
+pub mod ast;
+
 #[cfg(test)]
 mod tests;
 
