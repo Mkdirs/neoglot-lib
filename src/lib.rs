@@ -10,6 +10,9 @@ pub mod regex;
 /// Extract tokens from files
 pub mod lexer;
 
+/// Semantical analysis module
+/// 
+/// Extracts Abstract Syntax Trees from tokens
 pub mod ast;
 
 #[cfg(test)]
