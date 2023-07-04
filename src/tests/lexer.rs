@@ -82,35 +82,58 @@ fn file_lexing(){
     let result2 = lexer.tokenize_content(include_str!("invalid.txt").to_string(), Some(Path::new("invalid.txt").to_path_buf()));
     let result3 = lexer.tokenize_content(include_str!("basic_math_sheet.txt").to_string(), Some(Path::new("basic_math_sheet.txt").to_path_buf()));
 
-    assert!(result1.unwrap().is_empty());
+    match result1 {
+        LexingResult::Ok(tokens) => assert!(tokens.is_empty()),
+        LexingResult::Err(_) => assert!(false)
+    }
     
-    assert_eq!(result2, Err(LexingError{ location:Location { file: Path::new("invalid.txt").to_path_buf(), line: 2, column: 2 } }));
-    
-    assert_eq!(result3.unwrap(), vec![
-        Token{ location:Location { file: Path::new("basic_math_sheet.txt").to_path_buf(), line: 0, column: 0 },
-            kind: TokenType::UINT, literal: String::from("10")
-        },
-
-        Token{ location:Location { file: Path::new("basic_math_sheet.txt").to_path_buf(), line: 0, column: 2 },
-            kind: TokenType::PLUS, literal: String::from("+")
-        },
-
-        Token{ location:Location { file: Path::new("basic_math_sheet.txt").to_path_buf(), line: 0, column: 3 },
-            kind: TokenType::UINT, literal: String::from("53")
-        },
-
-        Token{ location:Location { file: Path::new("basic_math_sheet.txt").to_path_buf(), line: 1, column: 0 },
-            kind: TokenType::UINT, literal: String::from("3")
-        },
-
-        Token{ location:Location { file: Path::new("basic_math_sheet.txt").to_path_buf(), line: 1, column: 2 },
-            kind: TokenType::MINUS, literal: String::from("-")
-        },
-
-        Token{ location:Location { file: Path::new("basic_math_sheet.txt").to_path_buf(), line: 1, column: 4 },
-            kind: TokenType::UINT, literal: String::from("125")
+    match result2{
+        LexingResult::Ok(_) => assert!(false),
+        LexingResult::Err(errors) => {
+            assert_eq!(errors.len(), 8);
+            assert_eq!(errors, vec![
+                LexingError{ location:Location { file: Path::new("invalid.txt").to_path_buf(), line: 2, column: 2 } },
+                LexingError{ location:Location { file: Path::new("invalid.txt").to_path_buf(), line: 2, column: 3 } },
+                LexingError{ location:Location { file: Path::new("invalid.txt").to_path_buf(), line: 2, column: 4 } },
+                LexingError{ location:Location { file: Path::new("invalid.txt").to_path_buf(), line: 2, column: 5 } },
+                LexingError{ location:Location { file: Path::new("invalid.txt").to_path_buf(), line: 2, column: 6 } },
+                LexingError{ location:Location { file: Path::new("invalid.txt").to_path_buf(), line: 2, column: 7 } },
+                LexingError{ location:Location { file: Path::new("invalid.txt").to_path_buf(), line: 2, column: 8 } },
+                LexingError{ location:Location { file: Path::new("invalid.txt").to_path_buf(), line: 2, column: 9 } }
+            ]);
         }
+    }
 
-    ]);
+    match result3{
+        LexingResult::Ok(tokens) => {
+            assert_eq!(tokens, vec![
+                Token{ location:Location { file: Path::new("basic_math_sheet.txt").to_path_buf(), line: 0, column: 0 },
+                    kind: TokenType::UINT, literal: String::from("10")
+                },
+
+                Token{ location:Location { file: Path::new("basic_math_sheet.txt").to_path_buf(), line: 0, column: 2 },
+                    kind: TokenType::PLUS, literal: String::from("+")
+                },
+
+                Token{ location:Location { file: Path::new("basic_math_sheet.txt").to_path_buf(), line: 0, column: 3 },
+                    kind: TokenType::UINT, literal: String::from("53")
+                },
+
+                Token{ location:Location { file: Path::new("basic_math_sheet.txt").to_path_buf(), line: 1, column: 0 },
+                    kind: TokenType::UINT, literal: String::from("3")
+                },
+
+                Token{ location:Location { file: Path::new("basic_math_sheet.txt").to_path_buf(), line: 1, column: 2 },
+                    kind: TokenType::MINUS, literal: String::from("-")
+                },
+
+                Token{ location:Location { file: Path::new("basic_math_sheet.txt").to_path_buf(), line: 1, column: 4 },
+                    kind: TokenType::UINT, literal: String::from("125")
+                }
+
+            ]);
+        },
+        LexingResult::Err(_) => assert!(false)
+    }
 
 }

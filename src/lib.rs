@@ -13,7 +13,7 @@ pub mod lexer;
 /// Semantical analysis module
 /// 
 /// Extracts Abstract Syntax Trees from tokens
-pub mod ast;
+pub mod parser;
 
 #[cfg(test)]
 mod tests;

@@ -20,25 +20,18 @@ pub trait TokenKind : Copy+regex::Symbol{}
 
 #[derive(Debug, PartialEq, Clone)]
 /// A token is a lexical unit produced by a [Lexer]
-/// 
-/// Ex: an integer, punctuation, variable names...
-/// 
-/// [location](Location) is where the token is in a file
-/// 
-/// [kind](TokenKind) the type of this token
-/// 
-/// literal is the value held by the token
 pub struct Token<TokenKind> {
+    /// Where the token is in a file ([Location])
     pub location: Location,
-    pub kind: TokenKind, 
+
+    /// The type of this token ([TokenKind])
+    pub kind: TokenKind,
+
+    /// The value held by the token ([String])
     pub literal: String
 }
 
 /// A LexerNode match a set of characters into one type of [token](Token)
-/// 
-/// [regex](Regex) is the matching sequence
-/// 
-/// [kind](TokenKind) the type of tokens to work with
 /// 
 /// # Exemples
 /// ```rust
@@ -73,7 +66,10 @@ pub struct Token<TokenKind> {
 /// 
 /// ```
 pub struct LexerNode<Kind:TokenKind> {
+    /// The matching sequence ([Regex])
     regex: Regex<char>,
+
+    /// The type of tokens to work with ([TokenKind])
     kind: Kind
 
 }
@@ -109,6 +105,12 @@ impl Display for LexingError{
 
 impl Error for LexingError{}
 
+/// Result type of the lexing process
+pub enum LexingResult<T:TokenKind>{
+    Err(Vec<LexingError>),
+    Ok(Vec<Token<T>>)
+}
+
 /// The Lexer performs a lexical analysis on characters and extract the [tokens](Token)
 /// 
 /// # Exemples
@@ -141,18 +143,23 @@ impl Error for LexingError{}
 /// let result = lexer.tokenize_content(String::from("10 +   25"), None);
 /// let location = Location{ file: Path::new("virtual_file").to_path_buf(), line:0, column:0};
 /// 
-/// assert!(result.is_ok());
-/// assert_eq!(result.unwrap(), vec![
-///     Token{ location: location.clone(), kind:TokenType::UInt, literal:String::from("10") },
-/// 
-///     Token{ location: Location{ file: Path::new("virtual_file").to_path_buf(), line:0, column:3 },
-///         kind: TokenType::Plus, literal:String::from("+")
+/// match result{
+///     LexingResult::Ok(tokens) =>{
+///         assert_eq!(tokens, vec![
+///             Token{ location: location.clone(), kind:TokenType::UInt, literal:String::from("10") },
+///             
+///             Token{ location: Location{ file: Path::new("virtual_file").to_path_buf(), line:0, column:3 },
+///                 kind: TokenType::Plus, literal:String::from("+")
+///             },
+///             
+///             Token{ location: Location{ file: Path::new("virtual_file").to_path_buf(), line:0, column:7 },
+///                 kind: TokenType::UInt, literal: String::from("25")
+///             }
+///         ]);
 ///     },
 /// 
-///     Token{ location: Location{ file: Path::new("virtual_file").to_path_buf(), line:0, column:7 },
-///         kind: TokenType::UInt, literal: String::from("25")
-///     }
-/// ]);
+///     LexingResult::Err(_) => assert!(false)
+/// }
 /// 
 /// ```
 pub struct Lexer<Kind:TokenKind>{
@@ -172,11 +179,11 @@ impl<Kind: TokenKind> Lexer<Kind>{
     /// content: The source [String] to extract the [tokens](Token) from
     /// 
     /// [path](Option<PathBuf>): The [path](PathBuf) to the file where content was taken, or [None] if it is irrelevent
-    pub fn tokenize_content(&self, content:String, path:Option<PathBuf>) -> Result<Vec<Token<Kind>>, LexingError>{
+    pub fn tokenize_content(&self, content:String, path:Option<PathBuf>) -> LexingResult<Kind>{
         let mut tokens:Vec<Token<Kind>> = vec![];
         let mut location = Location { file: path.unwrap_or(Path::new("virtual_file").to_path_buf()) , line: 0, column: 0 };
 
-
+        let mut errors:Vec<LexingError> = vec![];
 
         for line_content in content.lines() {
             let mut stream = line_content.chars().collect::<Vec<char>>();
@@ -197,7 +204,14 @@ impl<Kind: TokenKind> Lexer<Kind>{
                     }
                 }
 
-                if !matched && stream[0].is_whitespace(){
+                if !matched{
+                    if !stream[0].is_whitespace(){ errors.push(LexingError { location: location.clone() }) }
+
+                    stream.remove(0);
+                    location.column(location.column +1);
+                }
+
+                /*if !matched && stream[0].is_whitespace(){
                     // If no token was found and the current character is a whitespace
                     // Go to the next character
                     stream.remove(0);
@@ -206,8 +220,10 @@ impl<Kind: TokenKind> Lexer<Kind>{
                 else if !matched {
                     // Could not recognize the token
                     // return an error
+                    errors.push(LexingError { location });
                     return Err(LexingError { location });
                 }
+                */
             }
             
 
@@ -218,18 +234,20 @@ impl<Kind: TokenKind> Lexer<Kind>{
 
         }
 
-        Ok(tokens)
+        if !errors.is_empty(){ LexingResult::Err(errors) }
+        else { LexingResult::Ok(tokens) }
+
     }
 
     /// Extracts the [tokens](Token) from a file
     /// 
     /// [path](Path): The path to the file to extract the [tokens](Token) from
-    pub fn tokenize_file(&self, path: &Path) -> Result<Vec<Token<Kind>>, LexingError>{
+    pub fn tokenize_file(&self, path: &Path) -> LexingResult<Kind>{
         let content = fs::read_to_string(path);
         let location = Location { file: path.to_path_buf(), line: 0, column: 0 };
 
         // Could not read the file
-        if content.is_err() { return Err(LexingError { location }) }
+        if content.is_err() { return LexingResult::Err(vec![LexingError { location }]) }
 
         self.tokenize_content(content.unwrap(), Some(path.to_path_buf()))
 

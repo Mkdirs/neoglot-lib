@@ -26,17 +26,17 @@ impl Display for ParsingError{
 }
 impl Error for ParsingError{}
 
+/// Result type of the parsing process
+pub enum ParsingResult<T: ASTKind>{
+    Ok(Vec<AST<T>>),
+    Err(Vec<ParsingError>)
+}
+
 /// A ParserNode match a set of [tokens](Token) into one type of [AST]
-/// 
-/// [regex](Regex) is the matching sequence
-/// 
-/// [kind](ASTKind) the type of ast to work with
-/// 
-/// [parser](Fn) the closure that transforms the [tokens](Token) into an [AST]
 /// 
 /// # Exemples
 /// ```rust
-/// use crate::neoglot_lib::{lexer::*, regex::*, ast::*};
+/// use crate::neoglot_lib::{lexer::*, regex::*, parser::*};
 /// use std::path::Path;
 /// 
 /// #[derive(PartialEq, PartialOrd, Eq, Hash, Debug, Copy, Clone)]
@@ -97,20 +97,30 @@ impl Error for ParsingError{}
 /// let parser = Parser{ nodes };
 /// 
 /// let result = parser.parse(tokens);
-/// assert!(result.is_ok());
-/// assert_eq!(result.expect("Unexpected error"), vec![
-///         AST{ children: vec![], kind: ASTType::A },
-///         AST{ children: vec![], kind: ASTType::A },
-///         AST{ children: vec![], kind: ASTType::B },
-///         AST{ children: vec![], kind: ASTType::B }
-///     ]
-/// );
+/// 
+/// match result{
+///     ParsingResult::Ok(forest) => {
+///         assert_eq!(forest, vec![
+///             AST{ children: vec![], kind: ASTType::A },
+///             AST{ children: vec![], kind: ASTType::A },
+///             AST{ children: vec![], kind: ASTType::B },
+///             AST{ children: vec![], kind: ASTType::B },
+///         ]);
+///     },
+/// 
+///     ParsingResult::Err(_) => assert!(false)
+/// }
 /// 
 /// ```
 
 pub struct ParserNode<TokenT: TokenKind, ASTT: ASTKind>{
+    /// The matching sequence ([Regex])
     pub regex: Regex<TokenT>,
+
+    /// The type of [ast](AST) to work with ([ASTKind])
     pub kind: ASTT,
+
+    /// The closure that transforms the [tokens](Token) into an [AST] ([Fn])
     pub parser: Box<dyn Fn(Vec<Token<TokenT>>) -> Result<AST<ASTT>, ParsingError>>
 }
 
@@ -140,29 +150,35 @@ impl<TokenT: TokenKind, ASTT: ASTKind> ParserNode<TokenT, ASTT>{
 }
 
 /// Parse a set of [tokens](Token) into a list of [AST]
-/// 
-/// [nodes](ParserNode) the parsing modules
 pub struct Parser<TokenT: TokenKind, ASTT: ASTKind>{
+    /// The parsing modules ([ParserNode])
     pub nodes: Vec<Box<ParserNode<TokenT, ASTT>>>
 }
 
 impl<TokenT: TokenKind, ASTT:ASTKind> Parser<TokenT, ASTT>{
 
-    pub fn parse(&self, mut tokens:Vec<Token<TokenT>>) -> Result<Vec<AST<ASTT>>, ParsingError>{
-        let mut abstract_syntaxe_forest:Vec<AST<ASTT>> = vec![];
+    pub fn parse(&self, mut tokens:Vec<Token<TokenT>>) -> ParsingResult<ASTT>{
+        let mut abstract_syntax_forest:Vec<AST<ASTT>> = vec![];
+        let mut errors:Vec<ParsingError> = vec![];
 
         while !tokens.is_empty(){
             for node in &self.nodes{
                 if let Some(result) = node.parse(&mut tokens){
                     match result{
-                        Ok(ast) => abstract_syntaxe_forest.push(ast),
-                        Err(e) => return Err(e)
+                        Ok(ast) => abstract_syntax_forest.push(ast),
+                        Err(e) => {
+                            errors.push(e);
+                            tokens.remove(0);
+                        }
                     }
                 }
             }
         }
         
-
-        Ok(abstract_syntaxe_forest)
+        if !errors.is_empty(){
+            ParsingResult::Err(errors)
+        }else{
+            ParsingResult::Ok(abstract_syntax_forest)
+        }
     }
 }
