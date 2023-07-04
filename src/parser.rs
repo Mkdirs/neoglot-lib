@@ -114,7 +114,7 @@ pub enum ParsingResult<T: ASTKind>{
 /// ```
 
 pub struct ParserNode<TokenT: TokenKind, ASTT: ASTKind>{
-    /// The matching sequence ([Regex])
+    /// The matching sequence
     pub regex: Regex<TokenT>,
 
     /// The type of [ast](AST) to work with ([ASTKind])
@@ -151,7 +151,7 @@ impl<TokenT: TokenKind, ASTT: ASTKind> ParserNode<TokenT, ASTT>{
 
 /// Parse a set of [tokens](Token) into a list of [AST]
 pub struct Parser<TokenT: TokenKind, ASTT: ASTKind>{
-    /// The parsing modules ([ParserNode])
+    /// The parsing modules
     pub nodes: Vec<Box<ParserNode<TokenT, ASTT>>>
 }
 

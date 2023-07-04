@@ -21,13 +21,13 @@ pub trait TokenKind : Copy+regex::Symbol{}
 #[derive(Debug, PartialEq, Clone)]
 /// A token is a lexical unit produced by a [Lexer]
 pub struct Token<TokenKind> {
-    /// Where the token is in a file ([Location])
+    /// Where the token is in a file
     pub location: Location,
 
-    /// The type of this token ([TokenKind])
+    /// The [type](TokenKind) of this token
     pub kind: TokenKind,
 
-    /// The value held by the token ([String])
+    /// The value held by the token
     pub literal: String
 }
 
@@ -66,10 +66,10 @@ pub struct Token<TokenKind> {
 /// 
 /// ```
 pub struct LexerNode<Kind:TokenKind> {
-    /// The matching sequence ([Regex])
+    /// The matching sequence
     regex: Regex<char>,
 
-    /// The type of tokens to work with ([TokenKind])
+    /// The type of tokens to work with
     kind: Kind
 
 }
