@@ -1,3 +1,6 @@
+/// Special module for expression parsing
+pub mod expression;
+
 use std::{fmt::{Debug, Display}, error::Error};
 
 use crate::{lexer::{TokenKind, Token}, regex::Regex};
@@ -27,6 +30,7 @@ impl Display for ParsingError{
 impl Error for ParsingError{}
 
 /// Result type of the parsing process
+#[derive(Debug)]
 pub enum ParsingResult<T: ASTKind>{
     Ok(Vec<AST<T>>),
     Err(Vec<ParsingError>)
