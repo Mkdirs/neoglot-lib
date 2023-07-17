@@ -1,6 +1,6 @@
 use std::{fmt::Display, error::Error, path::{Path, PathBuf}, fs};
 
-use crate::regex::{Regex, self};
+use crate::{regex::{Regex, self}, build_report};
 
 #[derive(Debug, Clone, PartialEq)]
 /// The location of a [token](Token) in a file
@@ -99,7 +99,8 @@ pub struct LexingError{
 
 impl Display for LexingError{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("Failed to parse token at {} {}:{}", self.location.file.display(), self.location.line, self.location.column))
+        let msg = build_report("Failed to parse token", self.location.clone());
+        f.write_str(&msg)
     }
 }
 

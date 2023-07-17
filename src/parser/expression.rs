@@ -304,7 +304,7 @@ impl<T:TokenKind> ExpressionParser<T>{
 
         if !self.check_groups_validity(candidates){
             let loc = &candidates[0].location;
-            return Err(ParsingError { message: format!("Groups are not valid: {} {}:{}", loc.file.display(), loc.line, loc.column)})
+            return Err(ParsingError::InvalidGroups(loc.clone()))
         }
 
         let mut left = 0;
@@ -396,7 +396,7 @@ impl<T:TokenKind> ExpressionParser<T>{
         }else{
             let mut errors = vec![];
             for c in candidates{
-                errors.push(ParsingError{ message: format!("Cannot parse token: {c:?} at ({}) {}:{}", c.location.file.display(), c.location.line, c.location.column) })
+                errors.push(ParsingError::UnparsedToken(c.literal.clone(), c.location.clone()))
             }
             Some(ParsingResult::Err(errors))
         };

@@ -3,7 +3,7 @@ pub mod expression;
 
 use std::{fmt::{Debug, Display}, error::Error};
 
-use crate::{lexer::{TokenKind, Token}, regex::Regex};
+use crate::{lexer::{TokenKind, Token, Location}, regex::Regex};
 
 /// A trait representing the type of an [AST]
 pub trait ASTKind : PartialEq+Debug{}
@@ -21,10 +21,16 @@ pub struct AST<Kind: ASTKind>{
 
 #[derive(Debug)]
 /// Error type of the parsing process
-pub struct ParsingError{message: String}
+pub enum ParsingError{
+    /// Groups are not closed properly
+    InvalidGroups(Location),
+
+    /// Could not parse a token
+    UnparsedToken(String, Location)
+}
 impl Display for ParsingError{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
+        f.write_fmt(format_args!("{self:?}"))
     }
 }
 impl Error for ParsingError{}
