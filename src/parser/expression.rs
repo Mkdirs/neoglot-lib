@@ -21,7 +21,7 @@ impl<T:TokenKind> ASTKind for ExprAST<T>{}
 /// use std::path::Path;
 /// 
 /// #[derive(Debug, Copy, Clone, Hash, PartialOrd, Eq, PartialEq)]
-/// enum TokenType{A, B, ADD, SUB, MUL, OPEN_PAREN, CLOSED_PAREN}
+/// enum TokenType{A, B, C, ADD, SUB, MUL, OPEN_PAREN, CLOSED_PAREN}
 /// 
 /// impl Symbol for TokenType{}
 /// impl TokenKind for TokenType{}
@@ -132,6 +132,33 @@ impl<T:TokenKind> ASTKind for ExprAST<T>{}
 /// 
 /// ];
 /// 
+/// // A - B - C
+/// let expr5 = &[
+///     Token{ 
+///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 0 },
+///         kind: TokenType::A, literal: String::from("A")
+///     },
+///     Token{ 
+///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 1 },
+///         kind: TokenType::SUB, literal: String::from("-")
+///     },
+/// 
+///     Token{ 
+///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 2 },
+///         kind: TokenType::B, literal: String::from("B")
+///     },
+/// 
+///     Token{ 
+///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 3 },
+///         kind: TokenType::SUB, literal: String::from("-")
+///     },
+/// 
+///     Token{ 
+///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 4 },
+///         kind: TokenType::C, literal: String::from("C")
+///     }
+/// ];
+/// 
 /// let result1 = AST{
 ///     kind: ExprAST::Operator(TokenType::ADD),
 ///     children: vec![
@@ -170,6 +197,17 @@ impl<T:TokenKind> ASTKind for ExprAST<T>{}
 ///     ]
 /// };
 /// 
+/// let result5 = AST{
+///     kind: ExprAST::Operator(TokenType::SUB),
+///     children: vec![
+///         AST{ kind: ExprAST::Operator(TokenType::SUB), children: vec![
+///             AST{ kind: ExprAST::Operand(TokenType::A), children: vec![] },
+///             AST{ kind: ExprAST::Operand(TokenType::B), children: vec![] }
+///         ] },
+///         AST{ kind: ExprAST::Operand(TokenType::C), children: vec![] }
+///     ]
+/// };
+/// 
 /// if let Some(result) = parser.parse(expr1){
 ///     match result{
 ///         ParsingResult::Ok(ast) => assert_eq!(ast, vec![result1]),
@@ -191,6 +229,19 @@ impl<T:TokenKind> ASTKind for ExprAST<T>{}
 ///     }
 /// }else { assert!(false); }
 /// 
+/// if let Some(result) = parser.parse(expr4){
+///     match(result){
+///         ParsingResult::Ok(ast) => assert_eq!(ast, vec![result4]),
+///         ParsingResult::Err(errs) => assert!(false)
+///     }
+/// }else { assert!(false); }
+/// 
+/// if let Some(result) = parser.parse(expr5){
+///     match(result){
+///         ParsingResult::Ok(ast) => assert_eq!(ast, vec![result5]),
+///         ParsingResult::Err(errs) => assert!(false)
+///     }
+/// }else { assert!(false); }
 /// 
 /// 
 /// ```
@@ -264,7 +315,7 @@ impl<T:TokenKind> ExpressionParser<T>{
 
                 match min_priority {
                     Some(min_p) =>{
-                        if priority*priority_multiplier < min_p {
+                        if priority*priority_multiplier <= min_p {
                             min_priority = Some(*priority * priority_multiplier);
                             min_priority_indx = Some(i);
                         }
