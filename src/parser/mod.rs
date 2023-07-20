@@ -5,8 +5,6 @@ use std::{fmt::{Debug, Display}, error::Error};
 
 use crate::{lexer::{TokenKind, Token, Location}, regex::Regex};
 
-/// A trait representing the type of an [AST]
-pub trait ASTKind : PartialEq+Debug{}
 
 #[derive(Debug, PartialEq)]
 /// An Abstract Syntax Tree is a semantical unit generated from [tokens](Token)
@@ -14,9 +12,9 @@ pub trait ASTKind : PartialEq+Debug{}
 /// children: The children of this node
 /// 
 /// [kind](ASTKind): The type of this AST 
-pub struct AST<Kind: ASTKind>{
-    pub children:Vec<AST<Kind>>,
-    pub kind: Kind
+pub struct AST<T:TokenKind>{
+    pub children:Vec<AST<T>>,
+    pub kind: T
 }
 
 #[derive(Debug)]
@@ -37,7 +35,7 @@ impl Error for ParsingError{}
 
 /// Result type of the parsing process
 #[derive(Debug)]
-pub enum ParsingResult<T: ASTKind>{
+pub enum ParsingResult<T: TokenKind>{
     Ok(Vec<AST<T>>),
     Err(Vec<ParsingError>)
 }
@@ -55,10 +53,6 @@ pub enum ParsingResult<T: ASTKind>{
 /// impl Symbol for TokenType{}
 /// impl TokenKind for TokenType{}
 /// 
-/// #[derive(PartialEq, Debug)]
-/// enum ASTType{A, B}
-/// 
-/// impl ASTKind for ASTType{}
 /// 
 /// let mut tokens = vec![
 ///     Token{
@@ -90,16 +84,14 @@ pub enum ParsingResult<T: ASTKind>{
 ///     Box::new(
 ///         ParserNode{
 ///             regex: Regex::new().then(RegexElement::Item(TokenType::A, Quantifier::Exactly(1))),
-///             kind: ASTType::A,
-///             parser: Box::new(|tokens| Ok(AST{ children: vec![], kind: ASTType::A }))
+///             parser: Box::new(|tokens| Ok(AST{ children: vec![], kind: TokenType::A }))
 ///         }
 ///     ),
 /// 
 ///     Box::new(
 ///         ParserNode{
 ///             regex: Regex::new().then(RegexElement::Item(TokenType::B, Quantifier::Exactly(1))),
-///             kind: ASTType::B,
-///             parser: Box::new(|tokens| Ok(AST{ children: vec![], kind: ASTType::B }))
+///             parser: Box::new(|tokens| Ok(AST{ children: vec![], kind: TokenType::B }))
 ///         }
 ///     )
 /// ];
@@ -111,10 +103,10 @@ pub enum ParsingResult<T: ASTKind>{
 /// match result{
 ///     ParsingResult::Ok(forest) => {
 ///         assert_eq!(forest, vec![
-///             AST{ children: vec![], kind: ASTType::A },
-///             AST{ children: vec![], kind: ASTType::A },
-///             AST{ children: vec![], kind: ASTType::B },
-///             AST{ children: vec![], kind: ASTType::B },
+///             AST{ children: vec![], kind: TokenType::A },
+///             AST{ children: vec![], kind: TokenType::A },
+///             AST{ children: vec![], kind: TokenType::B },
+///             AST{ children: vec![], kind: TokenType::B },
 ///         ]);
 ///     },
 /// 
@@ -123,23 +115,20 @@ pub enum ParsingResult<T: ASTKind>{
 /// 
 /// ```
 
-pub struct ParserNode<TokenT: TokenKind, ASTT: ASTKind>{
+pub struct ParserNode<T: TokenKind>{
     /// The matching sequence
-    pub regex: Regex<TokenT>,
-
-    /// The type of [ast](AST) to work with ([ASTKind])
-    pub kind: ASTT,
+    pub regex: Regex<T>,
 
     /// The closure that transforms the [tokens](Token) into an [AST] ([Fn])
-    pub parser: Box<dyn Fn(Vec<Token<TokenT>>) -> Result<AST<ASTT>, ParsingError>>
+    pub parser: Box<dyn Fn(Vec<Token<T>>) -> Result<AST<T>, ParsingError>>
 }
 
 
 
-impl<TokenT: TokenKind, ASTT: ASTKind> ParserNode<TokenT, ASTT>{
+impl<T: TokenKind> ParserNode<T>{
 
-    pub fn parse(&self, tokens: &mut Vec<Token<TokenT>>) -> Option<Result<AST<ASTT>, ParsingError>>{
-        let token_types = tokens.iter().map(|e| e.kind).collect::<Vec<TokenT>>();
+    pub fn parse(&self, tokens: &mut Vec<Token<T>>) -> Option<Result<AST<T>, ParsingError>>{
+        let token_types = tokens.iter().map(|e| e.kind).collect::<Vec<T>>();
         let (matched, _) = self.regex.split_first(&token_types);
 
 
@@ -160,15 +149,15 @@ impl<TokenT: TokenKind, ASTT: ASTKind> ParserNode<TokenT, ASTT>{
 }
 
 /// Parse a set of [tokens](Token) into a list of [AST]
-pub struct Parser<TokenT: TokenKind, ASTT: ASTKind>{
+pub struct Parser<T: TokenKind>{
     /// The parsing modules
-    pub nodes: Vec<Box<ParserNode<TokenT, ASTT>>>
+    pub nodes: Vec<Box<ParserNode<T>>>
 }
 
-impl<TokenT: TokenKind, ASTT:ASTKind> Parser<TokenT, ASTT>{
+impl<T: TokenKind> Parser<T>{
 
-    pub fn parse(&self, mut tokens:Vec<Token<TokenT>>) -> ParsingResult<ASTT>{
-        let mut abstract_syntax_forest:Vec<AST<ASTT>> = vec![];
+    pub fn parse(&self, mut tokens:Vec<Token<T>>) -> ParsingResult<T>{
+        let mut abstract_syntax_forest:Vec<AST<T>> = vec![];
         let mut errors:Vec<ParsingError> = vec![];
 
         while !tokens.is_empty(){

@@ -2,16 +2,8 @@ use std::collections::{HashSet, HashMap};
 
 use crate::lexer::{TokenKind, Token};
 
-use super::{ASTKind, AST, ParsingError, ParsingResult};
+use super::{AST, ParsingError, ParsingResult};
 
-#[derive(Debug, PartialEq)]
-/// An [AST] for expression trees
-pub enum ExprAST<T:TokenKind>{
-    Operator(T),
-    Operand(T)
-}
-
-impl<T:TokenKind> ASTKind for ExprAST<T>{}
 
 /// A parser of expressions
 /// 
@@ -160,51 +152,51 @@ impl<T:TokenKind> ASTKind for ExprAST<T>{}
 /// ];
 /// 
 /// let result1 = AST{
-///     kind: ExprAST::Operator(TokenType::ADD),
+///     kind: TokenType::ADD,
 ///     children: vec![
-///         AST{ kind: ExprAST::Operand(TokenType::A), children: vec![] },
-///         AST{ kind: ExprAST::Operand(TokenType::B), children: vec![] }
+///         AST{ kind: TokenType::A, children: vec![] },
+///         AST{ kind: TokenType::B, children: vec![] }
 ///     ]
 /// };
 /// 
 /// let result2 = AST{
-///     kind: ExprAST::Operator(TokenType::SUB),
+///     kind: TokenType::SUB,
 ///     children: vec![
-///         AST{ kind: ExprAST::Operand(TokenType::A), children: vec![] },
-///         AST{ kind: ExprAST::Operand(TokenType::B), children: vec![] }
+///         AST{ kind: TokenType::A, children: vec![] },
+///         AST{ kind: TokenType::B, children: vec![] }
 ///     ]
 /// };
 /// 
 /// let result3 = AST{
-///     kind: ExprAST::Operator(TokenType::ADD),
+///     kind: TokenType::ADD,
 ///     children: vec![
-///         AST{ kind: ExprAST::Operand(TokenType::A), children: vec![] },
-///         AST{ kind: ExprAST::Operator(TokenType::MUL), children: vec![
-///             AST{ kind: ExprAST::Operand(TokenType::A), children: vec![] },
-///             AST{ kind: ExprAST::Operand(TokenType::B), children: vec![] }
+///         AST{ kind: TokenType::A, children: vec![] },
+///         AST{ kind: TokenType::MUL, children: vec![
+///             AST{ kind: TokenType::A, children: vec![] },
+///             AST{ kind: TokenType::B, children: vec![] }
 ///         ] }
 ///     ]
 /// };
 /// 
 /// let result4 = AST{
-///     kind: ExprAST::Operator(TokenType::SUB),
+///     kind: TokenType::SUB,
 ///     children: vec![
-///         AST{ kind: ExprAST::Operand(TokenType::A), children: vec![] },
-///         AST{ kind: ExprAST::Operator(TokenType::MUL), children: vec![
-///             AST{ kind: ExprAST::Operand(TokenType::A), children: vec![] },
-///             AST{ kind: ExprAST::Operand(TokenType::B), children: vec![] }
+///         AST{ kind: TokenType::A, children: vec![] },
+///         AST{ kind: TokenType::MUL, children: vec![
+///             AST{ kind: TokenType::A, children: vec![] },
+///             AST{ kind: TokenType::B, children: vec![] }
 ///         ] }
 ///     ]
 /// };
 /// 
 /// let result5 = AST{
-///     kind: ExprAST::Operator(TokenType::SUB),
+///     kind: TokenType::SUB,
 ///     children: vec![
-///         AST{ kind: ExprAST::Operator(TokenType::SUB), children: vec![
-///             AST{ kind: ExprAST::Operand(TokenType::A), children: vec![] },
-///             AST{ kind: ExprAST::Operand(TokenType::B), children: vec![] }
+///         AST{ kind: TokenType::SUB, children: vec![
+///             AST{ kind: TokenType::A, children: vec![] },
+///             AST{ kind: TokenType::B, children: vec![] }
 ///         ] },
-///         AST{ kind: ExprAST::Operand(TokenType::C), children: vec![] }
+///         AST{ kind: TokenType::C, children: vec![] }
 ///     ]
 /// };
 /// 
@@ -390,19 +382,19 @@ impl<T:TokenKind> ExpressionParser<T>{
 
 
     /// Parse an expression
-    pub fn parse(&self, candidates:&[Token<T>]) -> Option<ParsingResult<ExprAST<T>>>
+    pub fn parse(&self, candidates:&[Token<T>]) -> Option<ParsingResult<T>>
     {
         if candidates.is_empty(){ return None; }
 
         if candidates.len() == 1{
-            return Some(ParsingResult::Ok(vec![AST{ kind: ExprAST::Operand(candidates[0].kind), children: vec![] }]));
+            return Some(ParsingResult::Ok(vec![AST{ kind: candidates[0].kind, children: vec![] }]));
         }
 
 
         let min_indx = self.find_min_priority(&candidates.iter().map(|c| c.kind).collect::<Vec<T>>());
         
         let result = if let Some(min_indx) = min_indx{
-            let operator = ExprAST::Operator(candidates[min_indx].kind);
+            let operator = candidates[min_indx].kind;
 
             let mut errors:Vec<ParsingError> = vec![];
             let mut children = vec![];
@@ -455,18 +447,6 @@ impl<T:TokenKind> ExpressionParser<T>{
         result
     }
 
-    /// Transforms an [ExprAST] into a more general [AST]
-    /// 
-    /// expr: The expression tree to normalize
-    pub fn normalize<F, DestType: ASTKind>(expr:AST<ExprAST<T>>, transformer:F) -> AST<DestType>
-    where F: Fn(ExprAST<T>) -> DestType
-    {
-        let normalized_kind = (transformer)(expr.kind);
-        let normalized_children:Vec<AST<DestType>> = expr.children.into_iter().map(|c| Self::normalize(c, &transformer)).collect();
-
-
-        AST{ kind: normalized_kind, children: normalized_children }
-    }
 
 
 }
