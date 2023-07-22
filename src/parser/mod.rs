@@ -54,7 +54,7 @@ pub enum ParsingResult<T: TokenKind>{
 /// impl TokenKind for TokenType{}
 /// 
 /// 
-/// let mut tokens = vec![
+/// let tokens = &[
 ///     Token{
 ///         location: Location{ file: Path::new("file").to_path_buf(), line: 0, column: 0 },
 ///         kind: TokenType::A,
@@ -100,6 +100,7 @@ pub enum ParsingResult<T: TokenKind>{
 /// 
 /// let result = parser.parse(tokens);
 /// 
+/// 
 /// match result{
 ///     ParsingResult::Ok(forest) => {
 ///         assert_eq!(forest, vec![
@@ -120,14 +121,14 @@ pub struct ParserNode<T: TokenKind>{
     pub regex: Regex<T>,
 
     /// The closure that transforms the [tokens](Token) into an [AST] ([Fn])
-    pub parser: Box<dyn Fn(Vec<Token<T>>) -> Result<AST<T>, ParsingError>>
+    pub parser: Box<dyn Fn(&[Token<T>]) -> Result<AST<T>, ParsingError>>
 }
 
 
 
 impl<T: TokenKind> ParserNode<T>{
 
-    pub fn parse(&self, tokens: &mut Vec<Token<T>>) -> Option<Result<AST<T>, ParsingError>>{
+    pub fn parse(&self, tokens: &mut &[Token<T>]) -> Option<Result<AST<T>, ParsingError>>{
         let token_types = tokens.iter().map(|e| e.kind).collect::<Vec<T>>();
         let (matched, _) = self.regex.split_first(&token_types);
 
@@ -135,12 +136,10 @@ impl<T: TokenKind> ParserNode<T>{
         let result = if matched.is_empty(){
             None
         }else{
-            Some((self.parser)(tokens[0..matched.len()].to_vec()))
+            Some((self.parser)(&tokens[0..matched.len()]))
         };
 
-        for i in 0..matched.len(){
-            tokens.remove(i);
-        }
+        *tokens = &tokens[matched.len()..];
 
         result
 
@@ -156,7 +155,7 @@ pub struct Parser<T: TokenKind>{
 
 impl<T: TokenKind> Parser<T>{
 
-    pub fn parse(&self, mut tokens:Vec<Token<T>>) -> ParsingResult<T>{
+    pub fn parse(&self, mut tokens:&[Token<T>]) -> ParsingResult<T>{
         let mut abstract_syntax_forest:Vec<AST<T>> = vec![];
         let mut errors:Vec<ParsingError> = vec![];
 
@@ -167,12 +166,16 @@ impl<T: TokenKind> Parser<T>{
                         Ok(ast) => abstract_syntax_forest.push(ast),
                         Err(e) => {
                             errors.push(e);
-                            tokens.remove(0);
+
+                            // Theoretically could panic if tokens is empty
+                            // The loop condition should prevent that from happening
+                            tokens = &tokens[1..];
                         }
                     }
                 }
             }
         }
+
         
         if !errors.is_empty(){
             ParsingResult::Err(errors)
