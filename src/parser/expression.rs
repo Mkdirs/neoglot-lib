@@ -29,32 +29,32 @@ use super::{AST, ParsingError, ParsingResult};
 /// // A + B
 /// let expr1 = &[
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 0 },
+///         location: Location{ file: String::from(""), line: 0, column: 0 },
 ///         kind: TokenType::A, literal: String::from("A")
 ///     },
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 1 },
+///         location: Location{ file: String::from(""), line: 0, column: 1 },
 ///         kind: TokenType::ADD, literal: String::from("+")
 ///     },
 /// 
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 2 },
+///         location: Location{ file: String::from(""), line: 0, column: 2 },
 ///         kind: TokenType::B, literal: String::from("B")
 ///     }
 /// ];
 /// // A - B
 /// let expr2 = &[
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 0 },
+///         location: Location{ file: String::from(""), line: 0, column: 0 },
 ///         kind: TokenType::A, literal: String::from("A")
 ///     },
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 1 },
+///         location: Location{ file: String::from(""), line: 0, column: 1 },
 ///         kind: TokenType::SUB, literal: String::from("+")
 ///     },
 /// 
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 2 },
+///         location: Location{ file: String::from(""), line: 0, column: 2 },
 ///         kind: TokenType::B, literal: String::from("B")
 ///     }
 /// ];
@@ -62,36 +62,36 @@ use super::{AST, ParsingError, ParsingResult};
 /// // A +(A * B)
 /// let expr3 = &[
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 0 },
+///         location: Location{ file: String::from(""), line: 0, column: 0 },
 ///         kind: TokenType::A, literal: String::from("A")
 ///     },
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 1 },
+///         location: Location{ file: String::from(""), line: 0, column: 1 },
 ///         kind: TokenType::ADD, literal: String::from("+")
 ///     },
 /// 
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 2 },
+///         location: Location{ file: String::from(""), line: 0, column: 2 },
 ///         kind: TokenType::OPEN_PAREN, literal: String::from("(")
 ///     },
 /// 
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 3 },
+///         location: Location{ file: String::from(""), line: 0, column: 3 },
 ///         kind: TokenType::A, literal: String::from("A")
 ///     },
 /// 
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 4 },
+///         location: Location{ file: String::from(""), line: 0, column: 4 },
 ///         kind: TokenType::MUL, literal: String::from("*")
 ///     },
 /// 
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 5 },
+///         location: Location{ file: String::from(""), line: 0, column: 5 },
 ///         kind: TokenType::B, literal: String::from("B")
 ///     },
 /// 
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 6 },
+///         location: Location{ file: String::from(""), line: 0, column: 6 },
 ///         kind: TokenType::CLOSED_PAREN, literal: String::from(")")
 ///     }
 /// ];
@@ -99,26 +99,26 @@ use super::{AST, ParsingError, ParsingResult};
 /// // A - A*B
 /// let expr4 = &[
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 0 },
+///         location: Location{ file: String::from(""), line: 0, column: 0 },
 ///         kind: TokenType::A, literal: String::from("A")
 ///     },
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 1 },
+///         location: Location{ file: String::from(""), line: 0, column: 1 },
 ///         kind: TokenType::SUB, literal: String::from("-")
 ///     },
 /// 
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 2 },
+///         location: Location{ file: String::from(""), line: 0, column: 2 },
 ///         kind: TokenType::A, literal: String::from("A")
 ///     },
 /// 
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 3 },
+///         location: Location{ file: String::from(""), line: 0, column: 3 },
 ///         kind: TokenType::MUL, literal: String::from("*")
 ///     },
 /// 
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 4 },
+///         location: Location{ file: String::from(""), line: 0, column: 4 },
 ///         kind: TokenType::B, literal: String::from("B")
 ///     },
 /// 
@@ -127,26 +127,26 @@ use super::{AST, ParsingError, ParsingResult};
 /// // A - B - C
 /// let expr5 = &[
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 0 },
+///         location: Location{ file: String::from(""), line: 0, column: 0 },
 ///         kind: TokenType::A, literal: String::from("A")
 ///     },
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 1 },
+///         location: Location{ file: String::from(""), line: 0, column: 1 },
 ///         kind: TokenType::SUB, literal: String::from("-")
 ///     },
 /// 
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 2 },
+///         location: Location{ file: String::from(""), line: 0, column: 2 },
 ///         kind: TokenType::B, literal: String::from("B")
 ///     },
 /// 
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 3 },
+///         location: Location{ file: String::from(""), line: 0, column: 3 },
 ///         kind: TokenType::SUB, literal: String::from("-")
 ///     },
 /// 
 ///     Token{ 
-///         location: Location{ file: Path::new("").to_path_buf(), line: 0, column: 4 },
+///         location: Location{ file: String::from(""), line: 0, column: 4 },
 ///         kind: TokenType::C, literal: String::from("C")
 ///     }
 /// ];
@@ -337,7 +337,7 @@ impl<T:TokenKind> ExpressionParser<T>{
     }
 
     /// Strips the leading and trailing groups token
-    fn strip_group<'a>(&self, candidates:&'a[Token<T>]) -> Result<Option<&'a[Token<T>]>, ParsingError>{
+    fn strip_group<'a>(&self, candidates:&'a[Token<T>]) -> Result<Option<&'a[Token<T>]>, ParsingError<T>>{
         
         if self.high_priority_group_start.is_none()
         || self.high_priority_group_end.is_none()
@@ -346,8 +346,8 @@ impl<T:TokenKind> ExpressionParser<T>{
         }
 
         if !self.check_groups_validity(candidates){
-            let loc = &candidates[0].location;
-            return Err(ParsingError::InvalidGroups(loc.clone()))
+            let loc = candidates[0].location.clone();
+            return Err(ParsingError::InvalidGroups(loc))
         }
 
         let mut left = 0;
@@ -396,7 +396,7 @@ impl<T:TokenKind> ExpressionParser<T>{
         let result = if let Some(min_indx) = min_indx{
             let operator = candidates[min_indx].kind;
 
-            let mut errors:Vec<ParsingError> = vec![];
+            let mut errors:Vec<ParsingError<T>> = vec![];
             let mut children = vec![];
 
 
@@ -439,7 +439,7 @@ impl<T:TokenKind> ExpressionParser<T>{
         }else{
             let mut errors = vec![];
             for c in candidates{
-                errors.push(ParsingError::UnparsedToken(c.literal.clone(), c.location.clone()))
+                errors.push(ParsingError::UnparsedToken(c.clone()))
             }
             Some(ParsingResult::Err(errors))
         };

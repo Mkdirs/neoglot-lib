@@ -1,11 +1,11 @@
-use std::{fmt::Display, error::Error, path::{Path, PathBuf}, fs};
+use std::{fmt::Display, error::Error, fs};
 
 use crate::{regex::{Regex, self}, build_report};
 
 #[derive(Debug, Clone, PartialEq)]
 /// The location of a [token](Token) in a file
 pub struct Location {
-    pub file: std::path::PathBuf,
+    pub file: String,
     pub line: usize,
     pub column: usize
 }
@@ -51,12 +51,12 @@ pub struct Token<TokenKind> {
 ///     TokenType::UInt
 /// );
 /// 
-/// let location = Location{ file: Path::new("virtual_file").to_path_buf(), line:0, column:0};
+/// let location = Location{ file: "virtual_file".to_string(), line:0, column:0};
 /// 
 /// let candidate1 = "25+ world".chars().collect::<Vec<char>>();
 /// let candidate2 = "#test".chars().collect::<Vec<char>>();
 /// 
-/// let result1:(&[char], Option<Token<TokenType>>) = (&['+', ' ', 'w', 'o', 'r', 'l', 'd'], Some(Token{ location: location.clone(), kind:TokenType::UInt, literal:String::from("25") }));
+/// let result1:(&[char], Option<Token<TokenType>>) = (&['+', ' ', 'w', 'o', 'r', 'l', 'd'], Some(Token{ location: location.clone(), kind:TokenType::UInt, literal: "25".to_string() }));
 /// 
 /// let result2:(&[char], Option<Token<TokenType>>) = (&['#', 't', 'e', 's', 't'], None);
 /// 
@@ -75,7 +75,7 @@ pub struct LexerNode<Kind:TokenKind> {
 }
 
 impl<Kind:TokenKind> LexerNode<Kind>{
-    pub fn new(regex: Regex<char>, kind:Kind) -> Self{ LexerNode{ regex, kind} }
+    pub fn new<'a>(regex: Regex<char>, kind:Kind) -> Self{ LexerNode{ regex, kind} }
 
     /// This function tries to construct the first token that match the matching sequence
     /// 
@@ -141,19 +141,19 @@ pub enum LexingResult<T:TokenKind>{
 /// lexer.register(uint_node);
 /// lexer.register(plus_node);
 /// 
-/// let result = lexer.tokenize_content(String::from("10 +   25"), None);
-/// let location = Location{ file: Path::new("virtual_file").to_path_buf(), line:0, column:0};
+/// let result = lexer.tokenize_content(String::from("10 +   25"), "");
+/// let location = Location{ file: String::new(), line:0, column:0};
 /// 
 /// match result{
 ///     LexingResult::Ok(tokens) =>{
 ///         assert_eq!(tokens, vec![
 ///             Token{ location: location.clone(), kind:TokenType::UInt, literal:String::from("10") },
 ///             
-///             Token{ location: Location{ file: Path::new("virtual_file").to_path_buf(), line:0, column:3 },
+///             Token{ location: Location{ file: String::new(), line:0, column:3 },
 ///                 kind: TokenType::Plus, literal:String::from("+")
 ///             },
 ///             
-///             Token{ location: Location{ file: Path::new("virtual_file").to_path_buf(), line:0, column:7 },
+///             Token{ location: Location{ file: String::new(), line:0, column:7 },
 ///                 kind: TokenType::UInt, literal: String::from("25")
 ///             }
 ///         ]);
@@ -179,10 +179,10 @@ impl<Kind: TokenKind> Lexer<Kind>{
     /// 
     /// content: The source [String] to extract the [tokens](Token) from
     /// 
-    /// [path](Option<PathBuf>): The [path](PathBuf) to the file where content was taken, or [None] if it is irrelevent
-    pub fn tokenize_content(&self, content:String, path:Option<PathBuf>) -> LexingResult<Kind>{
+    /// [path]: The path to the file where content was taken
+    pub fn tokenize_content(&self, content:String, path: &str) -> LexingResult<Kind>{
         let mut tokens:Vec<Token<Kind>> = vec![];
-        let mut location = Location { file: path.unwrap_or(Path::new("virtual_file").to_path_buf()) , line: 0, column: 0 };
+        let mut location = Location { file: path.to_string(), line: 0, column: 0 };
 
         let mut errors:Vec<LexingError> = vec![];
 
@@ -243,14 +243,14 @@ impl<Kind: TokenKind> Lexer<Kind>{
     /// Extracts the [tokens](Token) from a file
     /// 
     /// [path](Path): The path to the file to extract the [tokens](Token) from
-    pub fn tokenize_file(&self, path: &Path) -> LexingResult<Kind>{
+    pub fn tokenize_file(&self, path: &str) -> LexingResult<Kind>{
         let content = fs::read_to_string(path);
-        let location = Location { file: path.to_path_buf(), line: 0, column: 0 };
+        let location = Location { file: path.to_string(), line: 0, column: 0 };
 
         // Could not read the file
         if content.is_err() { return LexingResult::Err(vec![LexingError { location }]) }
 
-        self.tokenize_content(content.unwrap(), Some(path.to_path_buf()))
+        self.tokenize_content(content.unwrap(), path)
 
         
     }
