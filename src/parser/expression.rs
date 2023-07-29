@@ -439,7 +439,7 @@ impl<T:TokenKind> ExpressionParser<T>{
         }else{
             let mut errors = vec![];
             for c in candidates{
-                errors.push(ParsingError::UnparsedToken(c.clone()))
+                errors.push(ParsingError::UnparsedSequence(c.location.clone()))
             }
             Some(ParsingResult::Err(errors))
         };

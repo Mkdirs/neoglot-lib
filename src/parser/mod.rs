@@ -17,22 +17,22 @@ pub struct AST<T:TokenKind>{
     pub children:Vec<AST<T>>
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 /// Error type of the parsing process
 pub enum ParsingError<T:TokenKind>{
     /// Groups are not closed properly
     InvalidGroups(Location),
 
-    /// Could not parse a token
-    UnparsedToken(Token<T>),
+    /// Could not parse a sequence of tokens
+    UnparsedSequence(Location),
 
     /// A block wasn't closed properly
     UnclosedBlock(Location),
 
-    // Self explanatory
+    /// Self explanatory
     UnexpectedToken{
-        expected: T,
-        got: T,
+        expected: Option<T>,
+        got: Option<T>,
         location: Location
     }
 }
@@ -205,12 +205,16 @@ impl<T: TokenKind> Parser<T>{
                         tokens = &tokens.get(tok.len()..).unwrap_or_default();
                     }
                 }
-                //continue;
+            }else if &tokens[0].kind == &self.block_end{
+                // tokens is not modified so an UnparsedLine error can also be added
+                errors.push(ParsingError::UnexpectedToken { expected: None, got: Some(self.block_end), location: tokens[0].location.clone() });
             }
 
+            let mut knwon_sequence = false;
             for node in &self.nodes{
                 
                 if let Some(result) = node.parse(&mut tokens, self){
+                    knwon_sequence = true;
                     match result{
                         ParsingResult::Ok(frst) => {
                             for ast in frst{
@@ -227,6 +231,11 @@ impl<T: TokenKind> Parser<T>{
                     }
                 }
             }
+
+            if !knwon_sequence && !tokens.is_empty(){
+                errors.push(ParsingError::UnparsedSequence(tokens[0].location.clone()));
+                return ParsingResult::Err(errors);
+            }
         }
 
         
@@ -238,18 +247,16 @@ impl<T: TokenKind> Parser<T>{
     }
 
     /// Slices a block out of the tokens for further parsing.
-    pub fn slice_block<'a>(&self, tokens:&'a[Token<T>]) -> Result<&'a[Token<T>], ParsingError<T>>{
+    fn slice_block<'a>(&self, tokens:&'a[Token<T>]) -> Result<&'a[Token<T>], ParsingError<T>>{
 
         let mut open_blocks = 1;
         let mut i = 1;
         let mut last_block_end = 0;
 
-        if tokens.is_empty() { return Ok(&[]); }
-
         if &tokens[0].kind != &self.block_start { return Err(
             ParsingError::UnexpectedToken{
-                expected: self.block_start,
-                got: tokens[0].kind,
+                expected: Some(self.block_start),
+                got: Some(tokens[0].kind),
                 location: tokens[0].location.clone()
             });
         }
