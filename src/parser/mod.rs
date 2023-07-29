@@ -8,11 +8,8 @@ use crate::{lexer::{TokenKind, Token, Location}, regex::Regex};
 
 #[derive(Debug, PartialEq, Clone)]
 /// An Abstract Syntax Tree is a semantical unit generated from [tokens](Token)
-/// 
-/// [kind](ASTKind): The type of this AST
-/// 
-/// children: The children of this node
 pub struct AST<T:TokenKind>{
+    /// The type of this AST (see [TokenKind])
     pub kind: T,
     pub children:Vec<AST<T>>
 }
@@ -162,10 +159,10 @@ pub struct Parser<T: TokenKind>{
     /// The parsing modules
     pub nodes: Vec<Box<ParserNode<T>>>,
 
-    // The start of a block
+    /// The start of a block (see [TokenKind])
     pub block_start: T,
 
-    // The end of a block
+    /// The end of a block (see [TokenKind])
     pub block_end: T
 }
 

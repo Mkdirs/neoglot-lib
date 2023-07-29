@@ -179,7 +179,7 @@ impl<Kind: TokenKind> Lexer<Kind>{
     /// 
     /// content: The source [String] to extract the [tokens](Token) from
     /// 
-    /// [path]: The path to the file where content was taken
+    /// path: The path to the file where content was taken
     pub fn tokenize_content(&self, content:String, path: &str) -> LexingResult<Kind>{
         let mut tokens:Vec<Token<Kind>> = vec![];
         let mut location = Location { file: path.to_string(), line: 0, column: 0 };
@@ -242,7 +242,7 @@ impl<Kind: TokenKind> Lexer<Kind>{
 
     /// Extracts the [tokens](Token) from a file
     /// 
-    /// [path](Path): The path to the file to extract the [tokens](Token) from
+    /// path: The path to the file to extract the [tokens](Token) from
     pub fn tokenize_file(&self, path: &str) -> LexingResult<Kind>{
         let content = fs::read_to_string(path);
         let location = Location { file: path.to_string(), line: 0, column: 0 };
