@@ -154,6 +154,30 @@ impl<T: TokenKind> ParserNode<T>{
     }
 }
 
+/// Gives a ParsingError if kind is None or if it is not equals to expected
+/// 
+/// kind: The TokenKind got
+/// 
+/// expected: The expected TokenKind
+/// 
+/// location: The location where this assertion happened
+/// 
+pub fn expect<T:TokenKind>(kind:Option<T>, expected:T, location:Location) -> Result<(), ParsingError<T>>{
+    if kind.is_none(){
+        return Err(ParsingError::UnexpectedToken {
+            expected: Some(expected), got: None, location
+        });
+    }
+    if kind.unwrap() != expected{
+        return Err(ParsingError::UnexpectedToken {
+            expected: Some(expected), got: kind, location
+        });
+    }
+
+    Ok(())
+}
+
+
 /// Parse a set of [tokens](Token) into a list of [AST]
 pub struct Parser<T: TokenKind>{
     /// The parsing modules
