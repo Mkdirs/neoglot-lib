@@ -3,8 +3,8 @@ use std::collections::{HashSet, HashMap};
 use crate::lexer::{TokenKind, Token};
 
 use super::{AST, ParsingError, ParsingResult};
-
-
+/*
+TODO: rewrite with the new Parser
 /// A parser of expressions
 /// 
 /// # Exemples
@@ -449,4 +449,4 @@ impl<T:TokenKind> ExpressionParser<T>{
 
 
 
-}
+}*/

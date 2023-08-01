@@ -31,7 +31,10 @@ pub enum ParsingError<T:TokenKind>{
         expected: Option<T>,
         got: Option<T>,
         location: Location
-    }
+    },
+
+    /// No tokens provided
+    NoTokens
 }
 impl<T:TokenKind> Display for ParsingError<T>{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -40,12 +43,14 @@ impl<T:TokenKind> Display for ParsingError<T>{
 }
 impl<T:TokenKind> Error for ParsingError<T>{}
 
+pub type ParsingResult<T> = Result<AST<T>, ParsingError<T>>;
+
 /// Result type of the parsing process
-#[derive(Debug)]
+/*#[derive(Debug)]
 pub enum ParsingResult<T: TokenKind>{
     Ok(Vec<AST<T>>),
     Err(Vec<ParsingError<T>>)
-}
+}*/
 
 /// A ParserNode match a set of [tokens](Token) into one type of [AST]
 /// 
@@ -91,35 +96,44 @@ pub enum ParsingResult<T: TokenKind>{
 ///     Box::new(
 ///         ParserNode{
 ///             regex: Regex::new().then(RegexElement::Item(TokenType::A, Quantifier::Exactly(1))),
-///             parser: Box::new(|tokens, _| ParsingResult::Ok(vec![AST{ children: vec![], kind: TokenType::A }]))
+///             parser: Box::new(|tokens| Ok(AST{ children: vec![], kind: TokenType::A }))
 ///         }
 ///     ),
 /// 
 ///     Box::new(
 ///         ParserNode{
 ///             regex: Regex::new().then(RegexElement::Item(TokenType::B, Quantifier::Exactly(1))),
-///             parser: Box::new(|tokens, _| ParsingResult::Ok(vec![AST{ children: vec![], kind: TokenType::B }]))
+///             parser: Box::new(|tokens| Ok(AST{ children: vec![], kind: TokenType::B }))
 ///         }
 ///     )
 /// ];
 /// 
-/// let parser = Parser{ nodes, block_start: TokenType::BlockS, block_end: TokenType::BlockE };
+/// let mut parser = Parser::new(tokens);
+/// parser.nodes = nodes;
 /// 
-/// let result = parser.parse(tokens);
+/// let mut forest:Vec<AST<TokenType>> = vec![];
+/// let mut errors:Vec<ParsingError<TokenType>> = vec![];
 /// 
+/// while !parser.finished(){
+///     match parser.parse_with_node(){
+///         Ok(ast) => forest.push(ast),
+///         Err(e) => {
+///             errors.push(e);
+///             parser.skip(1);
+///         }
+///     }
 /// 
-/// match result{
-///     ParsingResult::Ok(forest) => {
-///         assert_eq!(forest, vec![
-///             AST{ children: vec![], kind: TokenType::A },
-///             AST{ children: vec![], kind: TokenType::A },
-///             AST{ children: vec![], kind: TokenType::B },
-///             AST{ children: vec![], kind: TokenType::B },
-///         ]);
-///     },
-/// 
-///     ParsingResult::Err(_) => assert!(false)
 /// }
+/// 
+/// assert!(errors.is_empty());
+/// 
+/// 
+/// assert_eq!(forest, vec![
+///     AST{ children: vec![], kind: TokenType::A },
+///     AST{ children: vec![], kind: TokenType::A },
+///     AST{ children: vec![], kind: TokenType::B },
+///     AST{ children: vec![], kind: TokenType::B },
+/// ]);
 /// 
 /// ```
 
@@ -128,14 +142,14 @@ pub struct ParserNode<T: TokenKind>{
     pub regex: Regex<T>,
 
     /// The closure that transforms the [tokens](Token) into an [AST] ([Fn])
-    pub parser: Box<dyn Fn(&[Token<T>], &Parser<T>) -> ParsingResult<T>>
+    pub parser: Box<dyn Fn(&[Token<T>]) -> ParsingResult<T>>
 }
 
 
 
 impl<T: TokenKind> ParserNode<T>{
 
-    pub fn parse(&self, tokens: &mut &[Token<T>], p:&Parser<T>) -> Option<ParsingResult<T>>{
+    pub fn parse(&self, tokens: &mut &[Token<T>]) -> Option<ParsingResult<T>>{
         let token_types = tokens.iter().map(|e| e.kind).collect::<Vec<T>>();
         let (matched, _) = self.regex.split_first(&token_types);
 
@@ -143,7 +157,7 @@ impl<T: TokenKind> ParserNode<T>{
         let result = if matched.is_empty(){
             None
         }else{
-            Some((self.parser)(&tokens[0..matched.len()], p))
+            Some((self.parser)(&tokens[0..matched.len()]))
         };
 
         *tokens = &tokens[matched.len()..];
@@ -179,114 +193,110 @@ pub fn expect<T:TokenKind>(kind:Option<T>, expected:T, location:Location) -> Res
 
 
 /// Parse a set of [tokens](Token) into a list of [AST]
-pub struct Parser<T: TokenKind>{
+pub struct Parser<'a, T: TokenKind>{
+    /// Tokens to parse
+    tokens: &'a [Token<T>],
+
     /// The parsing modules
-    pub nodes: Vec<Box<ParserNode<T>>>,
-
-    /// The start of a block (see [TokenKind])
-    pub block_start: T,
-
-    /// The end of a block (see [TokenKind])
-    pub block_end: T
+    pub nodes: Vec<Box<ParserNode<T>>>
 }
 
-impl<T: TokenKind> Parser<T>{
+impl<'a, T: TokenKind> Parser<'a, T>{
 
-    pub fn new(block_start: T, block_end: T) -> Self{ Parser { nodes: vec![], block_start, block_end } }
+    pub fn new(tokens: &'a[Token<T>]) -> Self{ Parser { tokens, nodes: vec![] } }
 
-    pub fn parse(&self, mut tokens:&[Token<T>]) -> ParsingResult<T>{
-        let mut abstract_syntax_forest:Vec<AST<T>> = vec![];
-        let mut errors:Vec<ParsingError<T>> = vec![];
+    /// Parse with the first [ParserNode] that match the current sequence of tokens
+    pub fn parse_with_node(&mut self) -> ParsingResult<T>{
 
-        while !tokens.is_empty(){
-
-            if &tokens[0].kind == &self.block_start{
-                match self.slice_block(tokens){
-                    Err(e) => {
-                        errors.push(e);
-                        tokens = &tokens[1..];
-                    },
-                    Ok(tok) => {
-                        let mut block = AST{ kind: self.block_start, children: vec![] };
-
-                        match self.parse(&tok[1..tok.len()-1]){
-                            ParsingResult::Err(errs) =>{
-                                for e in errs { errors.push(e); }
-
-                            },
-
-                            ParsingResult::Ok(frst) => {
-                                block.children = frst;
-                                block.children.push(AST { kind: self.block_end, children: vec![] });
-
-                                abstract_syntax_forest.push(block);
-                            }
-                        }
-
-                        tokens = &tokens.get(tok.len()..).unwrap_or_default();
-                    }
-                }
-            }else if &tokens[0].kind == &self.block_end{
-                // tokens is not modified so an UnparsedLine error can also be added
-                errors.push(ParsingError::UnexpectedToken { expected: None, got: Some(self.block_end), location: tokens[0].location.clone() });
-            }
-
-            let mut knwon_sequence = false;
-            for node in &self.nodes{
-                
-                if let Some(result) = node.parse(&mut tokens, self){
-                    knwon_sequence = true;
-                    match result{
-                        ParsingResult::Ok(frst) => {
-                            for ast in frst{
-                                abstract_syntax_forest.push(ast);
-                            }
-                        },
-                        ParsingResult::Err(errs) => {
-                            for e in errs{ errors.push(e); }
-
-                            // Theoretically could panic if tokens is empty
-                            // The loop condition should prevent that from happening
-                            tokens = &tokens[1..];
-                        }
-                    }
-                }
-            }
-
-            if !knwon_sequence && !tokens.is_empty(){
-                errors.push(ParsingError::UnparsedSequence(tokens[0].location.clone()));
-                return ParsingResult::Err(errors);
-            }
+        if self.finished(){
+            return Err(ParsingError::NoTokens);
         }
 
+        for node in &self.nodes{
+                
+            if let Some(result) = node.parse(&mut self.tokens){
+                return result;
+                /*match result{
+                    ParsingResult::Ok(frst) => {
+                        for ast in frst{
+                            abstract_syntax_forest.push(ast);
+                        }
+                    },
+                    Err(errs) => {
+                        for e in errs{ errors.push(e); }
+
+                        // Theoretically could panic if tokens is empty
+                        // The loop condition should prevent that from happening
+                        self.tokens = &self.tokens[1..];
+                    }
+                }*/
+            }
+
+        }
+
+        return Err(ParsingError::UnparsedSequence(self.tokens[0].location.clone()));
+
         
-        if !errors.is_empty(){
-            ParsingResult::Err(errors)
-        }else{
-            ParsingResult::Ok(abstract_syntax_forest)
+    }
+
+    /// Skips *num* numbers of tokens if possible
+    pub fn skip(&mut self, num: usize){
+        if let Some(t) = self.tokens.get(num..){
+            self.tokens = t;
         }
     }
 
-    /// Slices a block out of the tokens for further parsing.
-    fn slice_block<'a>(&self, tokens:&'a[Token<T>]) -> Result<&'a[Token<T>], ParsingError<T>>{
+    /// Pops the current token out of the parser and return it or None
+    pub fn pop(&mut self) -> Option<&Token<T>>{
+        if self.finished() { return None; }
+
+        let t = &self.tokens[0];
+        self.tokens = &self.tokens[1..];
+        Some(t)
+        
+    }
+
+    /// Returns the current token or None
+    pub fn peek(&self) -> Option<&Token<T>>{
+        self.tokens.get(0)
+    }
+
+    /// returns the token at index *i* or None
+    pub fn peek_at(&self, i:usize) -> Option<&Token<T>>{
+        self.tokens.get(i)
+    }
+
+    /// Returns true if all tokens have been consumed
+    pub fn finished(&self) -> bool{ self.tokens.is_empty() }
+
+    /// Returns true if the current token is of type *kind*
+    pub fn on_token(&self, kind:T) -> bool{
+        if self.finished(){ return false; }
+
+        self.peek().unwrap().kind == kind
+    }
+
+
+    /// Slices a block out of the tokens for further parsing
+    /// 
+    /// The opening and last closing tokens are omitted
+    pub fn slice_block(&self, begin:T, end:T) -> Result<&'a[Token<T>], ParsingError<T>>{
 
         let mut open_blocks = 1;
         let mut i = 1;
         let mut last_block_end = 0;
 
-        if &tokens[0].kind != &self.block_start { return Err(
-            ParsingError::UnexpectedToken{
-                expected: Some(self.block_start),
-                got: Some(tokens[0].kind),
-                location: tokens[0].location.clone()
-            });
+        if self.finished(){ return Ok(&[]); }
+
+        if let Err(e) = expect(Some(self.tokens[0].kind), begin, self.tokens[0].location.clone()){
+            return Err(e);
         }
 
-        while i<tokens.len() && open_blocks != 0{
-            let token = &tokens[i];
+        while i < self.tokens.len() && open_blocks != 0{
+            let token = self.peek_at(i).unwrap();
 
-            if token.kind == self.block_start { open_blocks += 1; }
-            else if token.kind == self.block_end {
+            if token.kind == begin { open_blocks += 1; }
+            else if token.kind == end{
                 open_blocks -=1;
 
                 if open_blocks == 0 { last_block_end = i; }
@@ -296,9 +306,9 @@ impl<T: TokenKind> Parser<T>{
         }
 
         if open_blocks == 0{
-            Ok(&tokens[0..last_block_end+1])
+            Ok(&self.tokens[1..last_block_end])
         }else{
-            Err(ParsingError::UnclosedBlock(tokens[0].location.clone()))
+            Err(ParsingError::UnclosedBlock(self.tokens[0].location.clone()))
         }
 
     }

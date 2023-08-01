@@ -34,26 +34,40 @@ fn dangling_block_end(){
         }
     ];
 
-    let mut parser = Parser::new(TokenType::BlockBegin, TokenType::BlockEnd);
+    let mut parser = Parser::new(tokens);
 
     let nodes = vec![
         Box::new(
             ParserNode{
                 regex: Regex::new().then(RegexElement::Item(TokenType::A, Quantifier::Exactly(1))),
-                parser: Box::new(|_, _| ParsingResult::Ok(vec![AST{ kind:TokenType::A, children: vec![] }]))
+                parser: Box::new(|_| Ok(AST{ kind:TokenType::A, children: vec![] }))
             }
         ),
 
         Box::new(
             ParserNode{
                 regex: Regex::new().then(RegexElement::Item(TokenType::B, Quantifier::Exactly(1))),
-                parser: Box::new(|_, _| ParsingResult::Ok(vec![AST{ kind:TokenType::B, children: vec![] }]))
+                parser: Box::new(|_| Ok(AST{ kind:TokenType::B, children: vec![] }))
             }
         )
     ];
 
     parser.nodes = nodes;
-    let result = parser.parse(tokens);
+    let mut last_error:Option<ParsingError<TokenType>> = None;
+    while !parser.finished(){
+        match parser.parse_with_node(){
+            Ok(_ast) => {},
+            Err(e) => {
+                last_error = Some(e);
+                parser.skip(1);
+            }
+        }
+    }
+
+    assert_eq!(last_error, Some(ParsingError::UnparsedSequence(
+        Location { file: "".to_string(), line: 1, column: 3 }
+    )));
+    /*let result = parser.parse(tokens);
 
     match result{
         ParsingResult::Ok(_) => assert!(false),
@@ -63,7 +77,7 @@ fn dangling_block_end(){
                 ParsingError::UnparsedSequence(Location { file: "".to_string(), line: 1, column: 3 })
             ])
         }
-    }
+    }*/
 }
 
 
@@ -134,30 +148,77 @@ fn block_parsing(){
         },
     ];
 
-    let mut parser = Parser::new(TokenType::BlockBegin, TokenType::BlockEnd);
 
-    let nodes = vec![
-        Box::new(
-            ParserNode{
-                regex: Regex::new().then(RegexElement::Item(TokenType::A, Quantifier::Exactly(1))),
-                parser: Box::new(|_, _| ParsingResult::Ok(vec![AST{ kind:TokenType::A, children: vec![] }]))
+    fn init_nodes() -> Vec<Box<ParserNode<TokenType>>>{
+        vec![
+            Box::new(
+                ParserNode{
+                    regex: Regex::new().then(RegexElement::Item(TokenType::A, Quantifier::Exactly(1))),
+                    parser: Box::new(|_| Ok(AST{ kind:TokenType::A, children: vec![] }))
+                }
+            ),
+
+            Box::new(
+                ParserNode{
+                    regex: Regex::new().then(RegexElement::Item(TokenType::B, Quantifier::Exactly(1))),
+                    parser: Box::new(|_| Ok(AST{ kind:TokenType::B, children: vec![] }))
+                }
+            )
+        ]
+    }
+
+
+    fn parse(mut parser:Parser<TokenType>) -> Result<Vec<AST<TokenType>>, Vec<ParsingError<TokenType>>>{
+        let mut forest:Vec<AST<TokenType>> = vec![];
+        let mut errors:Vec<ParsingError<TokenType>> = vec![];
+
+        parser.nodes = init_nodes();
+
+        while !parser.finished(){
+            if parser.on_token(TokenType::BlockBegin){
+                match parser.slice_block(TokenType::BlockBegin, TokenType::BlockEnd) {
+                    Ok(tok) => {
+                        match parse(Parser::new(tok)){
+                            Ok(frst) => {
+                                let mut block = AST{ kind: TokenType::BlockBegin, children: frst };
+                                block.children.push(AST { kind: TokenType::BlockEnd, children: vec![] });
+
+                                forest.push(block);
+                            },
+
+                            Err(errs) =>{
+                                for e in errs{ errors.push(e) }
+                            }
+                        }
+                        parser.skip(tok.len()+2);
+                    },
+                    Err(e) => {
+                        errors.push(e);
+                        parser.skip(1);
+                    }
+                }
+
+            }else{
+                match parser.parse_with_node(){
+                    Ok(ast) => forest.push(ast),
+                    Err(e) => {
+                        errors.push(e);
+                        parser.skip(1);
+                    }
+                }
             }
-        ),
+        }
 
-        Box::new(
-            ParserNode{
-                regex: Regex::new().then(RegexElement::Item(TokenType::B, Quantifier::Exactly(1))),
-                parser: Box::new(|_, _| ParsingResult::Ok(vec![AST{ kind:TokenType::B, children: vec![] }]))
-            }
-        )
-    ];
+        if !errors.is_empty(){ Err(errors) }
+        else { Ok(forest) }
+    }
 
-    parser.nodes = nodes;
-    let result = parser.parse(tokens);
+    
+    let result = parse(Parser::new(tokens));
 
     match result{
-        ParsingResult::Err(_) => assert!(false),
-        ParsingResult::Ok(forest) => {
+        Err(_) => assert!(false),
+        Ok(forest) => {
             assert_eq!(forest, vec![
                 AST{ kind: TokenType::A, children: vec![] },
                 AST{ kind: TokenType::B, children: vec![] },
