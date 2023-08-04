@@ -2,9 +2,21 @@ use std::collections::{HashSet, HashMap};
 
 use crate::lexer::{TokenKind, Token};
 
-use super::{AST, ParsingError, ParsingResult};
-/*
-TODO: rewrite with the new Parser
+use super::{AST, ParsingError};
+
+#[derive(Debug, PartialEq, Clone)]
+/// The nodes in an expression
+pub enum Expr<'a, T:TokenKind>{
+    /// An operator
+    Operator(T),
+
+    /// An operand
+    Operand(T),
+
+    /// An unknown sequence that could not be parsed
+    /// Can be fed to a [Parser](super::Parser) for further processing
+    Unknown(&'a[Token<T>])
+}
 /// A parser of expressions
 /// 
 /// # Exemples
@@ -152,86 +164,86 @@ TODO: rewrite with the new Parser
 /// ];
 /// 
 /// let result1 = AST{
-///     kind: TokenType::ADD,
+///     kind: Expr::Operator(TokenType::ADD),
 ///     children: vec![
-///         AST{ kind: TokenType::A, children: vec![] },
-///         AST{ kind: TokenType::B, children: vec![] }
+///         AST{ kind: Expr::Operand(TokenType::A), children: vec![] },
+///         AST{ kind: Expr::Operand(TokenType::B), children: vec![] }
 ///     ]
 /// };
 /// 
 /// let result2 = AST{
-///     kind: TokenType::SUB,
+///     kind: Expr::Operator(TokenType::SUB),
 ///     children: vec![
-///         AST{ kind: TokenType::A, children: vec![] },
-///         AST{ kind: TokenType::B, children: vec![] }
+///         AST{ kind: Expr::Operand(TokenType::A), children: vec![] },
+///         AST{ kind: Expr::Operand(TokenType::B), children: vec![] }
 ///     ]
 /// };
 /// 
 /// let result3 = AST{
-///     kind: TokenType::ADD,
+///     kind: Expr::Operator(TokenType::ADD),
 ///     children: vec![
-///         AST{ kind: TokenType::A, children: vec![] },
-///         AST{ kind: TokenType::MUL, children: vec![
-///             AST{ kind: TokenType::A, children: vec![] },
-///             AST{ kind: TokenType::B, children: vec![] }
+///         AST{ kind: Expr::Operand(TokenType::A), children: vec![] },
+///         AST{ kind: Expr::Operator(TokenType::MUL), children: vec![
+///             AST{ kind: Expr::Operand(TokenType::A), children: vec![] },
+///             AST{ kind: Expr::Operand(TokenType::B), children: vec![] }
 ///         ] }
 ///     ]
 /// };
 /// 
 /// let result4 = AST{
-///     kind: TokenType::SUB,
+///     kind: Expr::Operator(TokenType::SUB),
 ///     children: vec![
-///         AST{ kind: TokenType::A, children: vec![] },
-///         AST{ kind: TokenType::MUL, children: vec![
-///             AST{ kind: TokenType::A, children: vec![] },
-///             AST{ kind: TokenType::B, children: vec![] }
+///         AST{ kind: Expr::Operand(TokenType::A), children: vec![] },
+///         AST{ kind: Expr::Operator(TokenType::MUL), children: vec![
+///             AST{ kind: Expr::Operand(TokenType::A), children: vec![] },
+///             AST{ kind: Expr::Operand(TokenType::B), children: vec![] }
 ///         ] }
 ///     ]
 /// };
 /// 
 /// let result5 = AST{
-///     kind: TokenType::SUB,
+///     kind: Expr::Operator(TokenType::SUB),
 ///     children: vec![
-///         AST{ kind: TokenType::SUB, children: vec![
-///             AST{ kind: TokenType::A, children: vec![] },
-///             AST{ kind: TokenType::B, children: vec![] }
+///         AST{ kind: Expr::Operator(TokenType::SUB), children: vec![
+///             AST{ kind: Expr::Operand(TokenType::A), children: vec![] },
+///             AST{ kind: Expr::Operand(TokenType::B), children: vec![] }
 ///         ] },
-///         AST{ kind: TokenType::C, children: vec![] }
+///         AST{ kind: Expr::Operand(TokenType::C), children: vec![] }
 ///     ]
 /// };
 /// 
 /// if let Some(result) = parser.parse(expr1){
 ///     match result{
-///         ParsingResult::Ok(ast) => assert_eq!(ast, vec![result1]),
-///         ParsingResult::Err(errs) => assert!(false)
+///         Ok(ast) => assert_eq!(ast, result1),
+///         Err(errs) => assert!(false)
 ///     }
 /// }else { assert!(false); }
 /// 
 /// if let Some(result) = parser.parse(expr2){
 ///     match result{
-///         ParsingResult::Ok(ast) => assert_eq!(ast, vec![result2]),
-///         ParsingResult::Err(errs) => assert!(false)
+///         Ok(ast) => assert_eq!(ast, result2),
+///         Err(errs) => assert!(false)
 ///     }
 /// }else { assert!(false); }
 /// 
 /// if let Some(result) = parser.parse(expr3){
 ///     match result{
-///         ParsingResult::Ok(ast) => assert_eq!(ast, vec![result3]),
-///         ParsingResult::Err(errs) => assert!(false)
+///         Ok(ast) => assert_eq!(ast, result3),
+///         Err(errs) => assert!(false)
 ///     }
 /// }else { assert!(false); }
 /// 
 /// if let Some(result) = parser.parse(expr4){
 ///     match(result){
-///         ParsingResult::Ok(ast) => assert_eq!(ast, vec![result4]),
-///         ParsingResult::Err(errs) => assert!(false)
+///         Ok(ast) => assert_eq!(ast, result4),
+///         Err(errs) => assert!(false)
 ///     }
 /// }else { assert!(false); }
 /// 
 /// if let Some(result) = parser.parse(expr5){
 ///     match(result){
-///         ParsingResult::Ok(ast) => assert_eq!(ast, vec![result5]),
-///         ParsingResult::Err(errs) => assert!(false)
+///         Ok(ast) => assert_eq!(ast, result5),
+///         Err(errs) => assert!(false)
 ///     }
 /// }else { assert!(false); }
 /// 
@@ -285,22 +297,22 @@ impl<T:TokenKind> ExpressionParser<T>{
     /// Finds the operator with the least priority
     /// 
     /// candidates: An expression
-    fn find_min_priority(&self, candidates:&[T]) -> Option<usize>{
+    fn find_min_priority(&self, candidates:&[Token<T>]) -> Option<usize>{
         let mut min_priority = None;
         let mut min_priority_indx = None;
         let mut priority_multiplier = 1;
 
         for i in 0..candidates.len(){
-            let c = candidates[i];
-            if let Some(priority) = self.priority.get(&c){
+            let c = &candidates[i];
+            if let Some(priority) = self.priority.get(&c.kind){
 
                 // If we are inside a parenthesis-like bloc,
                 // the priority must be multiplied
                 // we also skip the bloc start/end
-                if self.high_priority_group_start.is_some_and(|e| e == c){
+                if self.high_priority_group_start.is_some_and(|e| e == c.kind){
                     priority_multiplier = priority_multiplier * 100;
                     continue;
-                }else if self.high_priority_group_end.is_some_and(|e| e == c){
+                }else if self.high_priority_group_end.is_some_and(|e| e == c.kind){
                     priority_multiplier = priority_multiplier / 100;
                     continue;
                 }else{ priority_multiplier = 1 };
@@ -330,10 +342,15 @@ impl<T:TokenKind> ExpressionParser<T>{
         if self.high_priority_group_start.is_none() || self.high_priority_group_end.is_none(){
             return true;
         }
-        let open_groups = candidates.iter().filter(|e| Some(e.kind) == self.high_priority_group_start).count();
-        let closed_groups = candidates.iter().filter(|e| Some(e.kind) == self.high_priority_group_end).count();
+        let mut open_groups = 0;
+        for c in candidates{
+            if c.kind == self.high_priority_group_start.unwrap(){ open_groups += 1; }
+            else if c.kind == self.high_priority_group_end.unwrap(){ open_groups -= 1; }
+
+            if open_groups < 0{ break; }
+        }
         
-        open_groups == closed_groups
+        open_groups == 0
     }
 
     /// Strips the leading and trailing groups token
@@ -382,16 +399,16 @@ impl<T:TokenKind> ExpressionParser<T>{
 
 
     /// Parse an expression
-    pub fn parse(&self, candidates:&[Token<T>]) -> Option<ParsingResult<T>>
+    pub fn parse<'a>(&self, candidates:&'a[Token<T>]) -> Option<Result<AST<Expr<'a, T>>, Vec<ParsingError<T>>>>
     {
         if candidates.is_empty(){ return None; }
 
         if candidates.len() == 1{
-            return Some(ParsingResult::Ok(vec![AST{ kind: candidates[0].kind, children: vec![] }]));
+            return Some(Ok(AST{ kind: Expr::Operand(candidates[0].kind), children: vec![] }));
         }
 
 
-        let min_indx = self.find_min_priority(&candidates.iter().map(|c| c.kind).collect::<Vec<T>>());
+        let min_indx = self.find_min_priority(candidates);
         
         let result = if let Some(min_indx) = min_indx{
             let operator = candidates[min_indx].kind;
@@ -407,8 +424,10 @@ impl<T:TokenKind> ExpressionParser<T>{
                 Ok(opt) => {
                     if let Some(left) = self.parse(opt.unwrap_or_default()){
                         match left {
-                            ParsingResult::Ok(ast) => ast.into_iter().for_each(|e| children.push(e)),
-                            ParsingResult::Err(e) => e.into_iter().for_each(|e| errors.push(e))
+                            Ok(ast) => children.push(ast),
+                            Err(e) => {
+                                for err in e { errors.push(err); }
+                            }
                         }
                     }
                 },
@@ -419,8 +438,10 @@ impl<T:TokenKind> ExpressionParser<T>{
                 Ok(opt) => {
                     if let Some(right) = self.parse(opt.unwrap_or_default()){
                         match right {
-                            ParsingResult::Ok(ast) => ast.into_iter().for_each(|e| children.push(e)),
-                            ParsingResult::Err(e) => e.into_iter().for_each(|e| errors.push(e))
+                            Ok(ast) => children.push(ast),
+                            Err(e) => {
+                                for err in e { errors.push(err); }
+                            }
                         }
                         
                     }
@@ -428,20 +449,14 @@ impl<T:TokenKind> ExpressionParser<T>{
                 Err(e) => errors.push(e)
             }
 
-
-
-
             if !errors.is_empty(){
-                Some(ParsingResult::Err(errors))
+                Some(Err(errors))
             }else{
-                Some(ParsingResult::Ok(vec![AST{ kind: operator, children }]))
+                Some(Ok(AST{ kind: Expr::Operator(operator), children }))
             }
+            
         }else{
-            let mut errors = vec![];
-            for c in candidates{
-                errors.push(ParsingError::UnparsedSequence(c.location.clone()))
-            }
-            Some(ParsingResult::Err(errors))
+            Some(Ok(AST { kind: Expr::Unknown(candidates), children: vec![] }))
         };
 
         result
@@ -449,4 +464,4 @@ impl<T:TokenKind> ExpressionParser<T>{
 
 
 
-}*/
+}

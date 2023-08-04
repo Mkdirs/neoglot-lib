@@ -7,9 +7,9 @@ use crate::{lexer::{TokenKind, Token, Location}, regex::Regex};
 
 
 #[derive(Debug, PartialEq, Clone)]
-/// An Abstract Syntax Tree is a semantical unit generated from [tokens](Token)
-pub struct AST<T:TokenKind>{
-    /// The type of this AST (see [TokenKind])
+/// An Abstract Syntax Tree is a semantical unit
+pub struct AST<T:PartialEq+Clone>{
+    /// The type of this AST
     pub kind: T,
     pub children:Vec<AST<T>>
 }
