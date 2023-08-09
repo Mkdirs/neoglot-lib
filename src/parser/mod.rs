@@ -43,14 +43,9 @@ impl<T:TokenKind> Display for ParsingError<T>{
 }
 impl<T:TokenKind> Error for ParsingError<T>{}
 
-pub type ParsingResult<T> = Result<AST<T>, ParsingError<T>>;
-
 /// Result type of the parsing process
-/*#[derive(Debug)]
-pub enum ParsingResult<T: TokenKind>{
-    Ok(Vec<AST<T>>),
-    Err(Vec<ParsingError<T>>)
-}*/
+pub type ParsingResult<T, E> = Result<AST<T>, ParsingError<E>>;
+
 
 /// A ParserNode match a set of [tokens](Token) into one type of [AST]
 /// 
@@ -137,19 +132,19 @@ pub enum ParsingResult<T: TokenKind>{
 /// 
 /// ```
 
-pub struct ParserNode<T: TokenKind>{
+pub struct ParserNode<T: TokenKind, ASTNode:PartialEq+Clone>{
     /// The matching sequence
     pub regex: Regex<T>,
 
     /// The closure that transforms the [tokens](Token) into an [AST] ([Fn])
-    pub parser: Box<dyn Fn(&[Token<T>]) -> ParsingResult<T>>
+    pub parser: Box<dyn Fn(&[Token<T>]) -> ParsingResult<ASTNode, T>>
 }
 
 
 
-impl<T: TokenKind> ParserNode<T>{
+impl<T: TokenKind, ASTNode:PartialEq+Clone> ParserNode<T, ASTNode>{
 
-    pub fn parse(&self, tokens: &mut &[Token<T>]) -> Option<ParsingResult<T>>{
+    pub fn parse(&self, tokens: &mut &[Token<T>]) -> Option<ParsingResult<ASTNode, T>>{
         let token_types = tokens.iter().map(|e| e.kind).collect::<Vec<T>>();
         let (matched, _) = self.regex.split_first(&token_types);
 
@@ -193,20 +188,20 @@ pub fn expect<T:TokenKind>(kind:Option<T>, expected:T, location:Location) -> Res
 
 
 /// Parse a set of [tokens](Token) into a list of [AST]
-pub struct Parser<'a, T: TokenKind>{
+pub struct Parser<'a, T: TokenKind, ASTNode:PartialEq+Clone>{
     /// Tokens to parse
     tokens: &'a [Token<T>],
 
     /// The parsing modules
-    pub nodes: Vec<Box<ParserNode<T>>>
+    pub nodes: Vec<Box<ParserNode<T, ASTNode>>>
 }
 
-impl<'a, T: TokenKind> Parser<'a, T>{
+impl<'a, T: TokenKind, ASTNode:PartialEq+Clone> Parser<'a, T, ASTNode>{
 
     pub fn new(tokens: &'a[Token<T>]) -> Self{ Parser { tokens, nodes: vec![] } }
 
     /// Parse with the first [ParserNode] that match the current sequence of tokens
-    pub fn parse_with_node(&mut self) -> ParsingResult<T>{
+    pub fn parse_with_node(&mut self) -> ParsingResult<ASTNode, T>{
 
         if self.finished(){
             return Err(ParsingError::NoTokens);

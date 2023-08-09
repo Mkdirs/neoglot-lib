@@ -149,7 +149,7 @@ fn block_parsing(){
     ];
 
 
-    fn init_nodes() -> Vec<Box<ParserNode<TokenType>>>{
+    fn init_nodes() -> Vec<Box<ParserNode<TokenType, TokenType>>>{
         vec![
             Box::new(
                 ParserNode{
@@ -168,7 +168,7 @@ fn block_parsing(){
     }
 
 
-    fn parse(mut parser:Parser<TokenType>) -> Result<Vec<AST<TokenType>>, Vec<ParsingError<TokenType>>>{
+    fn parse(mut parser:Parser<TokenType, TokenType>) -> Result<Vec<AST<TokenType>>, Vec<ParsingError<TokenType>>>{
         let mut forest:Vec<AST<TokenType>> = vec![];
         let mut errors:Vec<ParsingError<TokenType>> = vec![];
 
