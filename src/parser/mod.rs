@@ -302,7 +302,7 @@ impl<'a, T: TokenKind, ASTNode:PartialEq+Clone> Parser<'a, T, ASTNode>{
         let mut i = 1;
         let mut last_block_end = 0;
 
-        if self.finished(){ return Ok(&[]); }
+        if self.finished(){ return Err(ParsingError::NoTokens); }
 
         if let Err(e) = expect(Some(self.tokens[0].kind), begin, self.tokens[0].location.clone()){
             return Err(e);
