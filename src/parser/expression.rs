@@ -6,12 +6,12 @@ use super::{AST, ParsingError};
 
 #[derive(Debug, PartialEq, Clone)]
 /// The nodes in an expression
-pub enum Expr<'a, T:PartialEq + Clone>{
+pub enum Expr<'a, T:TokenKind>{
     /// An operator
-    Operator(T),
+    Operator(Token<T>),
 
     /// An operand
-    Operand(T),
+    Operand(Token<T>),
 
     /// An unknown sequence that could not be parsed
     /// Can be fed to a [Parser](super::Parser) for further processing
@@ -164,51 +164,114 @@ pub enum Expr<'a, T:PartialEq + Clone>{
 /// ];
 /// 
 /// let result1 = AST{
-///     kind: Expr::Operator(TokenType::ADD),
+///     kind: Expr::Operator(Token{ 
+///             location: Location{ file: String::from(""), line: 0, column: 1 },
+///             kind: TokenType::ADD, literal: String::from("+")
+///         }),
 ///     children: vec![
-///         AST{ kind: Expr::Operand(TokenType::A), children: vec![] },
-///         AST{ kind: Expr::Operand(TokenType::B), children: vec![] }
+///         AST{ kind: Expr::Operand(Token{ 
+///             location: Location{ file: String::from(""), line: 0, column: 0 },
+///             kind: TokenType::A, literal: String::from("A")
+///         }), children: vec![] },
+///         AST{ kind: Expr::Operand(Token{ 
+///             location: Location{ file: String::from(""), line: 0, column: 2 },
+///             kind: TokenType::B, literal: String::from("B")
+///         }), children: vec![] }
 ///     ]
 /// };
 /// 
 /// let result2 = AST{
-///     kind: Expr::Operator(TokenType::SUB),
+///     kind: Expr::Operator(Token{ 
+///             location: Location{ file: String::from(""), line: 0, column: 1 },
+///             kind: TokenType::SUB, literal: String::from("+")
+///         }),
 ///     children: vec![
-///         AST{ kind: Expr::Operand(TokenType::A), children: vec![] },
-///         AST{ kind: Expr::Operand(TokenType::B), children: vec![] }
+///         AST{ kind: Expr::Operand(Token{ 
+///             location: Location{ file: String::from(""), line: 0, column: 0 },
+///             kind: TokenType::A, literal: String::from("A")
+///         }), children: vec![] },
+///         AST{ kind: Expr::Operand(Token{ 
+///             location: Location{ file: String::from(""), line: 0, column: 2 },
+///             kind: TokenType::B, literal: String::from("B")
+///         }), children: vec![] }
 ///     ]
 /// };
 /// 
 /// let result3 = AST{
-///     kind: Expr::Operator(TokenType::ADD),
+///     kind: Expr::Operator(Token{ 
+///         location: Location{ file: String::from(""), line: 0, column: 1 },
+///         kind: TokenType::ADD, literal: String::from("+")
+///     }),
 ///     children: vec![
-///         AST{ kind: Expr::Operand(TokenType::A), children: vec![] },
-///         AST{ kind: Expr::Operator(TokenType::MUL), children: vec![
-///             AST{ kind: Expr::Operand(TokenType::A), children: vec![] },
-///             AST{ kind: Expr::Operand(TokenType::B), children: vec![] }
+///         AST{ kind: Expr::Operand(Token{ 
+///             location: Location{ file: String::from(""), line: 0, column: 0 },
+///             kind: TokenType::A, literal: String::from("A")
+///         }), children: vec![] },
+///         AST{ kind: Expr::Operator(Token{ 
+///             location: Location{ file: String::from(""), line: 0, column: 4 },
+///             kind: TokenType::MUL, literal: String::from("*")
+///         }), children: vec![
+///             AST{ kind: Expr::Operand(Token{ 
+///             location: Location{ file: String::from(""), line: 0, column: 3 },
+///             kind: TokenType::A, literal: String::from("A")
+///         }), children: vec![] },
+///             AST{ kind: Expr::Operand(Token{ 
+///             location: Location{ file: String::from(""), line: 0, column: 5 },
+///             kind: TokenType::B, literal: String::from("B")
+///         }), children: vec![] }
 ///         ] }
 ///     ]
 /// };
 /// 
 /// let result4 = AST{
-///     kind: Expr::Operator(TokenType::SUB),
+///     kind: Expr::Operator(Token{ 
+///             location: Location{ file: String::from(""), line: 0, column: 1 },
+///             kind: TokenType::SUB, literal: String::from("-")
+///         }),
 ///     children: vec![
-///         AST{ kind: Expr::Operand(TokenType::A), children: vec![] },
-///         AST{ kind: Expr::Operator(TokenType::MUL), children: vec![
-///             AST{ kind: Expr::Operand(TokenType::A), children: vec![] },
-///             AST{ kind: Expr::Operand(TokenType::B), children: vec![] }
+///         AST{ kind: Expr::Operand(Token{ 
+///             location: Location{ file: String::from(""), line: 0, column: 0 },
+///             kind: TokenType::A, literal: String::from("A")
+///         }), children: vec![] },
+///         AST{ kind: Expr::Operator(Token{ 
+///             location: Location{ file: String::from(""), line: 0, column: 3 },
+///             kind: TokenType::MUL, literal: String::from("*")
+///         }), children: vec![
+///             AST{ kind: Expr::Operand(Token{ 
+///                 location: Location{ file: String::from(""), line: 0, column: 2 },
+///                 kind: TokenType::A, literal: String::from("A")
+///             }), children: vec![] },
+///             AST{ kind: Expr::Operand(Token{ 
+///                 location: Location{ file: String::from(""), line: 0, column: 4 },
+///                 kind: TokenType::B, literal: String::from("B")
+///             }), children: vec![] }
 ///         ] }
 ///     ]
 /// };
 /// 
 /// let result5 = AST{
-///     kind: Expr::Operator(TokenType::SUB),
+///     kind: Expr::Operator(Token{ 
+///             location: Location{ file: String::from(""), line: 0, column: 3 },
+///             kind: TokenType::SUB, literal: String::from("-")
+///         }),
 ///     children: vec![
-///         AST{ kind: Expr::Operator(TokenType::SUB), children: vec![
-///             AST{ kind: Expr::Operand(TokenType::A), children: vec![] },
-///             AST{ kind: Expr::Operand(TokenType::B), children: vec![] }
+///         AST{ kind: Expr::Operator(Token{ 
+///             location: Location{ file: String::from(""), line: 0, column: 1 },
+///             kind: TokenType::SUB, literal: String::from("-")
+///         }), children: vec![
+///             AST{ kind: Expr::Operand(Token{ 
+///                 location: Location{ file: String::from(""), line: 0, column: 0 },
+///                 kind: TokenType::A, literal: String::from("A")
+///             }), children: vec![] },
+///             AST{ kind: Expr::Operand(Token{ 
+///                 location: Location{ file: String::from(""), line: 0, column: 2 },
+///                 kind: TokenType::B, literal: String::from("B")
+///             }), children: vec![] }
 ///         ] },
-///         AST{ kind: Expr::Operand(TokenType::C), children: vec![] }
+///         AST{ kind: Expr::Operand(Token{ 
+///             location: Location{ file: String::from(""), line: 0, column: 4 },
+///             kind: TokenType::C, literal: String::from("C")
+///         }), children: vec![] }
 ///     ]
 /// };
 /// 
@@ -404,14 +467,14 @@ impl<T:TokenKind> ExpressionParser<T>{
         if candidates.is_empty(){ return None; }
 
         if candidates.len() == 1{
-            return Some(Ok(AST{ kind: Expr::Operand(candidates[0].kind), children: vec![] }));
+            return Some(Ok(AST{ kind: Expr::Operand(candidates[0].clone()), children: vec![] }));
         }
 
 
         let min_indx = self.find_min_priority(candidates);
         
         let result = if let Some(min_indx) = min_indx{
-            let operator = candidates[min_indx].kind;
+            let operator = &candidates[min_indx];
 
             let mut errors:Vec<ParsingError<T>> = vec![];
             let mut children = vec![];
@@ -452,7 +515,7 @@ impl<T:TokenKind> ExpressionParser<T>{
             if !errors.is_empty(){
                 Some(Err(errors))
             }else{
-                Some(Ok(AST{ kind: Expr::Operator(operator), children }))
+                Some(Ok(AST{ kind: Expr::Operator(operator.clone()), children }))
             }
             
         }else{
