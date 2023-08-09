@@ -272,7 +272,7 @@ impl<'a, T: TokenKind, ASTNode:PartialEq+Clone> Parser<'a, T, ASTNode>{
     }
 
     /// Returns true if the sequence of tokens match the regex
-    pub fn on_regex(&self, regex:Regex<T>) -> bool{
+    pub fn on_regex(&self, regex:&Regex<T>) -> bool{
         if self.finished(){ return false; }
 
         let kinds = &self.tokens.iter().map(|e| e.kind).collect::<Vec<T>>();
@@ -281,7 +281,7 @@ impl<'a, T: TokenKind, ASTNode:PartialEq+Clone> Parser<'a, T, ASTNode>{
     }
 
     /// Slices tokens that match the regex
-    pub fn slice_regex(&self, regex:Regex<T>) -> Result<&'a[Token<T>], ParsingError<T>>{
+    pub fn slice_regex(&self, regex:&Regex<T>) -> Result<&'a[Token<T>], ParsingError<T>>{
         if self.finished(){ return Err(ParsingError::NoTokens) }
 
         let kinds = &self.tokens.iter().map(|e| e.kind).collect::<Vec<T>>();
