@@ -6,7 +6,7 @@ use super::{AST, ParsingError};
 
 #[derive(Debug, PartialEq, Clone)]
 /// The nodes in an expression
-pub enum Expr<'a, T:TokenKind>{
+pub enum Expr<'a, T:PartialEq + Clone>{
     /// An operator
     Operator(T),
 
