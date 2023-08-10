@@ -367,18 +367,19 @@ impl<T:TokenKind> ExpressionParser<T>{
 
         for i in 0..candidates.len(){
             let c = &candidates[i];
-            if let Some(priority) = self.priority.get(&c.kind){
 
-                // If we are inside a parenthesis-like bloc,
-                // the priority must be multiplied
-                // we also skip the bloc start/end
-                if self.high_priority_group_start.is_some_and(|e| e == c.kind){
-                    priority_multiplier = priority_multiplier * 100;
-                    continue;
-                }else if self.high_priority_group_end.is_some_and(|e| e == c.kind){
-                    priority_multiplier = priority_multiplier / 100;
-                    continue;
-                }else{ priority_multiplier = 1 };
+            // If we are inside a parenthesis-like bloc,
+            // the priority must be multiplied
+            // we also skip the bloc start/end
+            if self.high_priority_group_start.is_some_and(|e| e == c.kind){
+                priority_multiplier = priority_multiplier * 100;
+                continue;
+            }else if self.high_priority_group_end.is_some_and(|e| e == c.kind){
+                priority_multiplier = priority_multiplier / 100;
+                continue;
+            }/*else{ priority_multiplier = 1 };*/
+
+            if let Some(priority) = self.priority.get(&c.kind){
 
                 match min_priority {
                     Some(min_p) =>{
@@ -416,48 +417,44 @@ impl<T:TokenKind> ExpressionParser<T>{
         open_groups == 0
     }
 
-    /// Strips the leading and trailing groups token
-    fn strip_group<'a>(&self, candidates:&'a[Token<T>]) -> Result<Option<&'a[Token<T>]>, ParsingError<T>>{
-        
+    fn is_in_group(&self, candidates:&[Token<T>]) -> bool{
         if self.high_priority_group_start.is_none()
         || self.high_priority_group_end.is_none()
         || candidates.is_empty(){
-            return Ok(Some(candidates));
+            return false;
         }
 
-        if !self.check_groups_validity(candidates){
-            let loc = candidates[0].location.clone();
-            return Err(ParsingError::InvalidGroups(loc))
+        
+
+
+        let mut open_groups = 0;
+        let mut in_group = true;
+
+        for token in candidates{
+            if token.kind == self.high_priority_group_start.unwrap(){
+                open_groups += 1;
+                continue;
+            }
+            if token.kind == self.high_priority_group_end.unwrap(){
+                open_groups -= 1;
+                continue;
+            }
+
+            if open_groups <= 0 {
+                in_group = false;
+                break;
+            }
         }
 
-        let mut left = 0;
-        let mut right = 0;
-        let mut search = true;
-        let mut i = 0;
 
-        while search && i < candidates.len() {
-            let c = &candidates[i];
 
-            if Some(c.kind) == self.high_priority_group_start{ left += 1; }
-            else{ search = false; }
+        in_group
+    }
 
-            i += 1;
-        }
+    fn strip_group<'a>(&self, candidates:&'a[Token<T>]) -> Option<&'a[Token<T>]>{
+        candidates.get(1..candidates.len()-1)
 
-        search = true;
-        i = candidates.len()-1;
 
-        while search{
-            let c = &candidates[i];
-
-            if Some(c.kind) == self.high_priority_group_end { right +=1; }
-            else { search = false; }
-
-            if i == 0{ search = false;}
-            else { i -= 1;}
-        }
-
-        Ok(candidates.get(left..candidates.len()-right))
     }
 
 
@@ -470,6 +467,13 @@ impl<T:TokenKind> ExpressionParser<T>{
             return Some(Ok(AST{ kind: Expr::Operand(candidates[0].clone()), children: vec![] }));
         }
 
+        if !self.check_groups_validity(candidates){
+            return Some(Err(vec![ParsingError::InvalidGroups(candidates[0].location.clone())]));
+        }
+
+        if self.is_in_group(candidates){
+            return self.parse(self.strip_group(candidates).unwrap_or_default());
+        }
 
         let min_indx = self.find_min_priority(candidates);
         
@@ -480,37 +484,29 @@ impl<T:TokenKind> ExpressionParser<T>{
             let mut children = vec![];
 
 
-            let left_sub_expr = self.strip_group(candidates.get(0..min_indx).unwrap_or_default());
-            let right_sub_expr = self.strip_group(candidates.get(min_indx+1..candidates.len()).unwrap_or_default());
+            let left_sub_expr = candidates.get(0..min_indx).unwrap_or_default();
+            let right_sub_expr = candidates.get(min_indx+1..).unwrap_or_default();
 
-            match left_sub_expr{
-                Ok(opt) => {
-                    if let Some(left) = self.parse(opt.unwrap_or_default()){
-                        match left {
-                            Ok(ast) => children.push(ast),
-                            Err(e) => {
-                                for err in e { errors.push(err); }
-                            }
-                        }
+            if let Some(left) = self.parse(left_sub_expr){
+                match left{
+                    Ok(ast) => children.push(ast),
+                    Err(errs) =>{
+                        for e in errs { errors.push(e); }
                     }
-                },
-                Err(e) => errors.push(e)
+                }
             }
 
-            match right_sub_expr{
-                Ok(opt) => {
-                    if let Some(right) = self.parse(opt.unwrap_or_default()){
-                        match right {
-                            Ok(ast) => children.push(ast),
-                            Err(e) => {
-                                for err in e { errors.push(err); }
-                            }
-                        }
-                        
+            if let Some(right) = self.parse(right_sub_expr){
+                match right{
+                    Ok(ast) => children.push(ast),
+                    Err(errs) =>{
+                        for e in errs { errors.push(e); }
                     }
-                },
-                Err(e) => errors.push(e)
+                }
             }
+
+            
+
 
             if !errors.is_empty(){
                 Some(Err(errors))
