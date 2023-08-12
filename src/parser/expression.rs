@@ -2,7 +2,7 @@ use std::collections::{HashSet, HashMap};
 
 use crate::lexer::{TokenKind, Token};
 
-use super::{AST, ParsingError};
+use super::AST;
 
 #[derive(Debug, PartialEq, Clone)]
 /// The nodes in an expression
@@ -276,38 +276,23 @@ pub enum Expr<'a, T:TokenKind>{
 /// };
 /// 
 /// if let Some(result) = parser.parse(expr1){
-///     match result{
-///         Ok(ast) => assert_eq!(ast, result1),
-///         Err(errs) => assert!(false)
-///     }
+///     assert_eq!(result, result1);
 /// }else { assert!(false); }
 /// 
 /// if let Some(result) = parser.parse(expr2){
-///     match result{
-///         Ok(ast) => assert_eq!(ast, result2),
-///         Err(errs) => assert!(false)
-///     }
+///     assert_eq!(result, result2);
 /// }else { assert!(false); }
 /// 
 /// if let Some(result) = parser.parse(expr3){
-///     match result{
-///         Ok(ast) => assert_eq!(ast, result3),
-///         Err(errs) => assert!(false)
-///     }
+///     assert_eq!(result, result3);
 /// }else { assert!(false); }
 /// 
 /// if let Some(result) = parser.parse(expr4){
-///     match(result){
-///         Ok(ast) => assert_eq!(ast, result4),
-///         Err(errs) => assert!(false)
-///     }
+///     assert_eq!(result, result4);
 /// }else { assert!(false); }
 /// 
 /// if let Some(result) = parser.parse(expr5){
-///     match(result){
-///         Ok(ast) => assert_eq!(ast, result5),
-///         Err(errs) => assert!(false)
-///     }
+///     assert_eq!(result, result5);
 /// }else { assert!(false); }
 /// 
 /// 
@@ -403,8 +388,10 @@ impl<T:TokenKind> ExpressionParser<T>{
 
     /// Checks if the number of start_groups is equals to the number of end_groups
     fn check_groups_validity(&self, candidates:&[Token<T>]) -> bool{
-        if self.high_priority_group_start.is_none() || self.high_priority_group_end.is_none(){
-            return true;
+        if self.high_priority_group_start.is_none()
+        || self.high_priority_group_end.is_none()
+        || candidates.is_empty(){
+            return false;
         }
         let mut open_groups = 0;
         for c in candidates{
@@ -417,14 +404,13 @@ impl<T:TokenKind> ExpressionParser<T>{
         open_groups == 0
     }
 
+    /// Checks if candidates is in the form '(...)'
     fn is_in_group(&self, candidates:&[Token<T>]) -> bool{
         if self.high_priority_group_start.is_none()
         || self.high_priority_group_end.is_none()
         || candidates.is_empty(){
             return false;
         }
-
-        
 
 
         let mut open_groups = 0;
@@ -459,16 +445,16 @@ impl<T:TokenKind> ExpressionParser<T>{
 
 
     /// Parse an expression
-    pub fn parse<'a>(&self, candidates:&'a[Token<T>]) -> Option<Result<AST<Expr<'a, T>>, Vec<ParsingError<T>>>>
+    pub fn parse<'a>(&self, candidates:&'a[Token<T>]) -> Option<AST<Expr<'a, T>>>
     {
         if candidates.is_empty(){ return None; }
 
         if candidates.len() == 1{
-            return Some(Ok(AST{ kind: Expr::Operand(candidates[0].clone()), children: vec![] }));
+            return Some(AST{ kind: Expr::Operand(candidates[0].clone()), children: vec![] });
         }
 
         if !self.check_groups_validity(candidates){
-            return Some(Err(vec![ParsingError::InvalidGroups(candidates[0].location.clone())]));
+            return None;
         }
 
         if self.is_in_group(candidates){
@@ -480,7 +466,7 @@ impl<T:TokenKind> ExpressionParser<T>{
         let result = if let Some(min_indx) = min_indx{
             let operator = &candidates[min_indx];
 
-            let mut errors:Vec<ParsingError<T>> = vec![];
+            let mut sucess = true;
             let mut children = vec![];
 
 
@@ -488,34 +474,24 @@ impl<T:TokenKind> ExpressionParser<T>{
             let right_sub_expr = candidates.get(min_indx+1..).unwrap_or_default();
 
             if let Some(left) = self.parse(left_sub_expr){
-                match left{
-                    Ok(ast) => children.push(ast),
-                    Err(errs) =>{
-                        for e in errs { errors.push(e); }
-                    }
-                }
-            }
+                children.push(left);
+            }else{sucess = false;}
 
             if let Some(right) = self.parse(right_sub_expr){
-                match right{
-                    Ok(ast) => children.push(ast),
-                    Err(errs) =>{
-                        for e in errs { errors.push(e); }
-                    }
-                }
-            }
+                children.push(right);
+            }else{ sucess = false; }
 
             
 
 
-            if !errors.is_empty(){
-                Some(Err(errors))
+            if !sucess{
+                None
             }else{
-                Some(Ok(AST{ kind: Expr::Operator(operator.clone()), children }))
+                Some(AST{ kind: Expr::Operator(operator.clone()), children })
             }
             
         }else{
-            Some(Ok(AST { kind: Expr::Unknown(candidates), children: vec![] }))
+            Some(AST { kind: Expr::Unknown(candidates), children: vec![] })
         };
 
         result

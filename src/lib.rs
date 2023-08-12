@@ -33,13 +33,13 @@ pub fn build_report(message:&str, loc:Location) -> String{
             let end = line.len() - loc.column;
             let highlighted = highlight(line, loc.column, end);
 
-            format!("{message} at {} {}:{}\n{highlighted}", loc.file, loc.line, loc.column)
+            format!("{message} at {} {}:{}\n{highlighted}", loc.file, loc.line+1, loc.column+1)
         }else{
-            format!("{message} at {} {}:{}", loc.file, loc.line, loc.column)
+            format!("{message} at {} {}:{}", loc.file, loc.line+1, loc.column+1)
         }
 
     }else{
-        format!("{message} at {} {}:{}", loc.file, loc.line, loc.column)
+        format!("{message} at {} {}:{}", loc.file, loc.line+1, loc.column+1)
     }
 }
 

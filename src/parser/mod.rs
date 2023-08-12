@@ -1,9 +1,7 @@
 /// Special module for expression parsing
 pub mod expression;
 
-use std::{fmt::{Debug, Display}, error::Error};
-
-use crate::{lexer::{TokenKind, Token, Location}, regex::Regex};
+use crate::{lexer::{TokenKind, Token}, regex::Regex};
 
 
 #[derive(Debug, PartialEq, Clone)]
@@ -14,40 +12,8 @@ pub struct AST<T:PartialEq+Clone>{
     pub children:Vec<AST<T>>
 }
 
-#[derive(Debug, Clone, PartialEq)]
-/// Error type of the parsing process
-pub enum ParsingError<T:TokenKind>{
-    /// Groups are not closed properly
-    InvalidGroups(Location),
 
-    /// Could not parse a sequence of tokens
-    UnparsedSequence(Location),
-
-    /// A block wasn't closed properly
-    UnclosedBlock(Location),
-
-    /// Self explanatory
-    UnexpectedToken{
-        expected: Option<T>,
-        got: Option<T>,
-        location: Location
-    },
-
-    /// No tokens provided
-    NoTokens
-}
-impl<T:TokenKind> Display for ParsingError<T>{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{self:?}"))
-    }
-}
-impl<T:TokenKind> Error for ParsingError<T>{}
-
-/// Result type of the parsing process
-pub type ParsingResult<T, E> = Result<AST<T>, ParsingError<E>>;
-
-
-/// Gives a ParsingError if kind is None or if it is not equals to expected
+/// Returns false if kind is None or if it is not equals to expected
 /// 
 /// kind: The TokenKind got
 /// 
@@ -55,19 +21,12 @@ pub type ParsingResult<T, E> = Result<AST<T>, ParsingError<E>>;
 /// 
 /// location: The location where this assertion happened
 /// 
-pub fn expect<T:TokenKind>(kind:Option<T>, expected:T, location:Location) -> Result<(), ParsingError<T>>{
+pub fn expect<T:TokenKind>(kind:Option<T>, expected:T) -> bool{
     if kind.is_none(){
-        return Err(ParsingError::UnexpectedToken {
-            expected: Some(expected), got: None, location
-        });
+        return false;
     }
-    if kind.unwrap() != expected{
-        return Err(ParsingError::UnexpectedToken {
-            expected: Some(expected), got: kind, location
-        });
-    }
-
-    Ok(())
+   
+    kind.unwrap() == expected
 }
 
 
@@ -128,31 +87,31 @@ impl<'a, T: TokenKind> Parser<'a, T>{
     }
 
     /// Slices tokens that match the regex
-    pub fn slice_regex(&self, regex:&Regex<T>) -> Result<&'a[Token<T>], ParsingError<T>>{
-        if self.finished(){ return Err(ParsingError::NoTokens) }
+    pub fn slice_regex(&self, regex:&Regex<T>) -> Option<&'a[Token<T>]>{
+        if self.finished(){ return None; }
 
         let kinds = &self.tokens.iter().map(|e| e.kind).collect::<Vec<T>>();
         let (matched, _) = regex.split_first(kinds);
 
-        if matched.is_empty(){ return Err(ParsingError::UnparsedSequence(self.tokens[0].location.clone())) }
+        if matched.is_empty(){ return None; }
 
-        Ok(&self.tokens[..matched.len()])
+        Some(&self.tokens[..matched.len()])
     }
 
 
     /// Slices a block out of the tokens for further parsing
     /// 
     /// The opening and last closing tokens are omitted
-    pub fn slice_block(&self, begin:T, end:T) -> Result<&'a[Token<T>], ParsingError<T>>{
+    pub fn slice_block(&self, begin:T, end:T) -> Option<&'a[Token<T>]>{
 
         let mut open_blocks = 1;
         let mut i = 1;
         let mut last_block_end = 0;
 
-        if self.finished(){ return Err(ParsingError::NoTokens); }
+        if self.finished(){ return None; }
 
-        if let Err(e) = expect(Some(self.tokens[0].kind), begin, self.tokens[0].location.clone()){
-            return Err(e);
+        if !expect(Some(self.tokens[0].kind), begin){
+            return None;
         }
 
         while i < self.tokens.len() && open_blocks != 0{
@@ -169,9 +128,9 @@ impl<'a, T: TokenKind> Parser<'a, T>{
         }
 
         if open_blocks == 0{
-            Ok(&self.tokens[1..last_block_end])
+            Some(&self.tokens[1..last_block_end])
         }else{
-            Err(ParsingError::UnclosedBlock(self.tokens[0].location.clone()))
+            None
         }
 
     }

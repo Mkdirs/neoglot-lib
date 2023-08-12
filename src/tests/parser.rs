@@ -82,30 +82,30 @@ fn block_parsing(){
 
 
 
-    fn parse(mut parser:Parser<TokenType>) -> Result<Vec<AST<TokenType>>, Vec<ParsingError<TokenType>>>{
+    fn parse(mut parser:Parser<TokenType>) -> Option<Vec<AST<TokenType>>>{
         let mut forest:Vec<AST<TokenType>> = vec![];
-        let mut errors:Vec<ParsingError<TokenType>> = vec![];
+        let mut sucess = true;
 
         while !parser.finished(){
             if parser.on_token(TokenType::BlockBegin){
                 match parser.slice_block(TokenType::BlockBegin, TokenType::BlockEnd) {
-                    Ok(tok) => {
+                    Some(tok) => {
                         match parse(Parser::new(tok)){
-                            Ok(frst) => {
+                            Some(frst) => {
                                 let mut block = AST{ kind: TokenType::BlockBegin, children: frst };
                                 block.children.push(AST { kind: TokenType::BlockEnd, children: vec![] });
 
                                 forest.push(block);
                             },
 
-                            Err(errs) =>{
-                                for e in errs{ errors.push(e) }
+                            None =>{
+                                sucess = false;
                             }
                         }
                         parser.skip(tok.len()+2);
                     },
-                    Err(e) => {
-                        errors.push(e);
+                    None => {
+                        sucess = false;
                         parser.skip(1);
                     }
                 }
@@ -118,16 +118,16 @@ fn block_parsing(){
             }
         }
 
-        if !errors.is_empty(){ Err(errors) }
-        else { Ok(forest) }
+        if !sucess{ None }
+        else { Some(forest) }
     }
 
     
     let result = parse(Parser::new(tokens));
 
     match result{
-        Err(_) => assert!(false),
-        Ok(forest) => {
+        None=> assert!(false),
+        Some(forest) => {
             assert_eq!(forest, vec![
                 AST{ kind: TokenType::A, children: vec![] },
                 AST{ kind: TokenType::B, children: vec![] },
@@ -205,39 +205,33 @@ fn parse_expr(){
     let location = Location{file: String::new(), line: 0, column: 0};
     
 
-    match result{
-        Ok(ast) => {
-            assert_eq!(ast, AST{kind:  Expr::Operator(Token{kind: ExprTok::Plus, location: location.clone(), literal: "+".to_string()}), children: vec![
-                AST{ kind: Expr::Operator(Token{kind: ExprTok::Mul, location: location.clone(), literal: "*".to_string()}), children: vec![
-                    AST{ kind: Expr::Operator(Token{kind: ExprTok::Minus, location: location.clone(), literal: "-".to_string()}), children: vec![
-                        AST{ kind: Expr::Operand(Token{kind: ExprTok::A, location: location.clone(), literal: "A".to_string()}), children: vec![] },
-                        AST{ kind: Expr::Operand(Token{kind: ExprTok::B, location: location.clone(), literal: "B".to_string()}), children: vec![] }
-                    ] },
-
-                    AST{ kind: Expr::Operator(Token{kind: ExprTok::Minus, location: location.clone(), literal: "-".to_string()}), children: vec![
-                        AST{ kind: Expr::Operand(Token{kind: ExprTok::C, location: location.clone(), literal: "C".to_string()}), children: vec![] },
-                        AST{ kind: Expr::Operand(Token{kind: ExprTok::D, location: location.clone(), literal: "D".to_string()}), children: vec![] }
-                    ] }
+    assert_eq!(result, AST{kind:  Expr::Operator(Token{kind: ExprTok::Plus, location: location.clone(), literal: "+".to_string()}), children: vec![
+            AST{ kind: Expr::Operator(Token{kind: ExprTok::Mul, location: location.clone(), literal: "*".to_string()}), children: vec![
+                AST{ kind: Expr::Operator(Token{kind: ExprTok::Minus, location: location.clone(), literal: "-".to_string()}), children: vec![
+                    AST{ kind: Expr::Operand(Token{kind: ExprTok::A, location: location.clone(), literal: "A".to_string()}), children: vec![] },
+                    AST{ kind: Expr::Operand(Token{kind: ExprTok::B, location: location.clone(), literal: "B".to_string()}), children: vec![] }
                 ] },
 
-                AST{ kind: Expr::Operator(Token{kind: ExprTok::Mul, location: location.clone(), literal: "*".to_string()}), children: vec![
-                    AST{ kind: Expr::Operator(Token{kind: ExprTok::Minus, location: location.clone(), literal: "-".to_string()}), children: vec![
-                        AST{ kind: Expr::Operand(Token{kind: ExprTok::E, location: location.clone(), literal: "E".to_string()}), children: vec![] },
-                        AST{ kind: Expr::Operand(Token{kind: ExprTok::F, location: location.clone(), literal: "F".to_string()}), children: vec![] }
-                    ] },
-
-                    AST{ kind: Expr::Operator(Token{kind: ExprTok::Minus, location: location.clone(), literal: "-".to_string()}), children: vec![
-                        AST{ kind: Expr::Operand(Token{kind: ExprTok::G, location: location.clone(), literal: "G".to_string()}), children: vec![] },
-                        AST{ kind: Expr::Operand(Token{kind: ExprTok::H, location: location.clone(), literal: "H".to_string()}), children: vec![] }
-                    ] }
+                AST{ kind: Expr::Operator(Token{kind: ExprTok::Minus, location: location.clone(), literal: "-".to_string()}), children: vec![
+                    AST{ kind: Expr::Operand(Token{kind: ExprTok::C, location: location.clone(), literal: "C".to_string()}), children: vec![] },
+                    AST{ kind: Expr::Operand(Token{kind: ExprTok::D, location: location.clone(), literal: "D".to_string()}), children: vec![] }
                 ] }
+            ] },
+
+            AST{ kind: Expr::Operator(Token{kind: ExprTok::Mul, location: location.clone(), literal: "*".to_string()}), children: vec![
+                AST{ kind: Expr::Operator(Token{kind: ExprTok::Minus, location: location.clone(), literal: "-".to_string()}), children: vec![
+                    AST{ kind: Expr::Operand(Token{kind: ExprTok::E, location: location.clone(), literal: "E".to_string()}), children: vec![] },
+                    AST{ kind: Expr::Operand(Token{kind: ExprTok::F, location: location.clone(), literal: "F".to_string()}), children: vec![] }
+                ] },
+
+                AST{ kind: Expr::Operator(Token{kind: ExprTok::Minus, location: location.clone(), literal: "-".to_string()}), children: vec![
+                    AST{ kind: Expr::Operand(Token{kind: ExprTok::G, location: location.clone(), literal: "G".to_string()}), children: vec![] },
+                    AST{ kind: Expr::Operand(Token{kind: ExprTok::H, location: location.clone(), literal: "H".to_string()}), children: vec![] }
+                ] }
+            ] }
 
                 
-            ]});
-        },
-
-        Err(e) => assert!(false, "{:?}", e)
-    }
+        ]});
 
 }
 
@@ -301,34 +295,26 @@ fn parse_expr_nested(){
     let result = result.unwrap();
     let loc = Location{file: String::new(), line: 0, column: 0};
     
-
-    match result{
-        Ok(ast) => {
-            assert_eq!(ast, AST{ kind: Expr::Operator(Token{kind: ExprTok::Minus, location: loc.clone(), literal: "-".to_string()}), children: vec![
-                AST{ kind: Expr::Operand(Token{kind: ExprTok::A, location: loc.clone(), literal: "A".to_string()}), children: vec![] },
+    assert_eq!(result, AST{ kind: Expr::Operator(Token{kind: ExprTok::Minus, location: loc.clone(), literal: "-".to_string()}), children: vec![
+            AST{ kind: Expr::Operand(Token{kind: ExprTok::A, location: loc.clone(), literal: "A".to_string()}), children: vec![] },
         
-                AST{ kind: Expr::Operator(Token{kind: ExprTok::Mul, location: loc.clone(), literal: "*".to_string()}), children: vec![
-                    AST{ kind: Expr::Operand(Token{kind: ExprTok::B, location: loc.clone(), literal: "B".to_string()}), children: vec![] },
+            AST{ kind: Expr::Operator(Token{kind: ExprTok::Mul, location: loc.clone(), literal: "*".to_string()}), children: vec![
+                AST{ kind: Expr::Operand(Token{kind: ExprTok::B, location: loc.clone(), literal: "B".to_string()}), children: vec![] },
         
-                    AST{ kind: Expr::Operator(Token{kind: ExprTok::Minus, location: loc.clone(), literal: "-".to_string()}), children: vec![
-                        AST{ kind: Expr::Operator(Token{kind: ExprTok::Plus, location: loc.clone(), literal: "+".to_string()}), children: vec![
-                            AST{ kind: Expr::Operand(Token{kind: ExprTok::C, location: loc.clone(), literal: "C".to_string()}), children: vec![] },
+                AST{ kind: Expr::Operator(Token{kind: ExprTok::Minus, location: loc.clone(), literal: "-".to_string()}), children: vec![
+                    AST{ kind: Expr::Operator(Token{kind: ExprTok::Plus, location: loc.clone(), literal: "+".to_string()}), children: vec![
+                        AST{ kind: Expr::Operand(Token{kind: ExprTok::C, location: loc.clone(), literal: "C".to_string()}), children: vec![] },
         
-                            AST{ kind: Expr::Operator(Token{kind: ExprTok::Mul, location: loc.clone(), literal: "*".to_string()}), children: vec![
-                                AST{ kind: Expr::Operand(Token{kind: ExprTok::D, location: loc.clone(), literal: "D".to_string()}), children: vec![] },
-                                AST{ kind: Expr::Operand(Token{kind: ExprTok::G, location: loc.clone(), literal: "G".to_string()}), children: vec![] }
-                            ] }
-                        ] },
+                        AST{ kind: Expr::Operator(Token{kind: ExprTok::Mul, location: loc.clone(), literal: "*".to_string()}), children: vec![
+                            AST{ kind: Expr::Operand(Token{kind: ExprTok::D, location: loc.clone(), literal: "D".to_string()}), children: vec![] },
+                            AST{ kind: Expr::Operand(Token{kind: ExprTok::G, location: loc.clone(), literal: "G".to_string()}), children: vec![] }
+                        ] }
+                    ] },
         
-                        AST{ kind: Expr::Operand(Token{kind: ExprTok::H, location: loc.clone(), literal: "H".to_string()}), children: vec![] }
-                    ] }
+                    AST{ kind: Expr::Operand(Token{kind: ExprTok::H, location: loc.clone(), literal: "H".to_string()}), children: vec![] }
+                ] }
         
                     
-                ] }
-            ]});
-        },
-
-        Err(e) => assert!(false, "{:?}", e)
-    }
-
+            ] }
+        ]});
 }
