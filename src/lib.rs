@@ -30,8 +30,8 @@ pub fn build_report(message:&str, loc:Location) -> String{
         if reader.read_to_string(&mut contents).is_ok(){
             let line = contents.lines().nth(loc.line).unwrap();
 
-            let end = line.len() - loc.column;
-            let highlighted = highlight(line, loc.column, end);
+            let size = line.len() - (loc.column+1);
+            let highlighted = highlight(line, loc.column, size);
 
             format!("{message} at {} {}:{}\n{highlighted}", loc.file, loc.line+1, loc.column+1)
         }else{
@@ -49,9 +49,16 @@ pub fn report(message:&str, loc:Location){
 }
 
 /// Highlights an area under a text
-fn highlight(text:&str, start:usize, end:usize) -> String{
-    let size = end - start;
+fn highlight(text:&str, start:usize, size:usize) -> String{
     format!("{text}\n{}{}", " ".repeat(start), "^".repeat(size))
+}
+
+#[test]
+fn test_highlight(){
+    let txt = "Hello W0rld !";
+    let highlighted = highlight(txt, 6, 1);
+
+    assert_eq!(&highlighted, "Hello W0rld !\n      ^")
 }
 
 
