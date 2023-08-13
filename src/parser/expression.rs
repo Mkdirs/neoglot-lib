@@ -17,6 +17,19 @@ pub enum Expr<'a, T:TokenKind>{
     /// Can be fed to a [Parser](super::Parser) for further processing
     Unknown(&'a[Token<T>])
 }
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum Position{
+    Prefix,
+    Infix,
+    Sufix
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct Operator<T:TokenKind>{
+    pub kind:T,
+    pub position: Position
+}
 /// A parser of expressions
 /// 
 /// # Exemples
@@ -32,9 +45,9 @@ pub enum Expr<'a, T:TokenKind>{
 /// 
 /// let mut parser = ExpressionParser::<TokenType>::new();
 /// 
-/// parser.add_operator(TokenType::ADD, 1);
-/// parser.add_operator(TokenType::SUB, 1);
-/// parser.add_operator(TokenType::MUL, 2);
+/// parser.add_operator(Operator{kind: TokenType::ADD, position: Position::Infix}, 1);
+/// parser.add_operator(Operator{kind: TokenType::SUB, position: Position::Infix}, 1);
+/// parser.add_operator(Operator{kind: TokenType::MUL, position: Position::Infix}, 2);
 /// 
 /// parser.set_high_priority_group(TokenType::OPEN_PAREN, TokenType::CLOSED_PAREN);
 /// 
@@ -299,10 +312,10 @@ pub enum Expr<'a, T:TokenKind>{
 /// ```
 pub struct ExpressionParser<T: TokenKind>{
     /// Set of known operators
-    operators:HashSet<T>,
+    operators:HashSet<Operator<T>>,
 
     /// [HashMap] of operators and their priority
-    priority:HashMap<T, usize>,
+    priority:HashMap<Operator<T>, usize>,
 
     /// A [token](TokenKind) that acts like an open parenthesis on priority
     high_priority_group_start:Option<T>,
@@ -326,7 +339,7 @@ impl<T:TokenKind> ExpressionParser<T>{
     /// operator: The operator to add
     /// 
     /// priority: Its priority
-    pub fn add_operator(&mut self, operator:T, priority:usize){
+    pub fn add_operator(&mut self, operator:Operator<T>, priority:usize){
         self.operators.insert(operator);
         self.priority.insert(operator, priority);
     }
@@ -364,7 +377,8 @@ impl<T:TokenKind> ExpressionParser<T>{
                 continue;
             }/*else{ priority_multiplier = 1 };*/
 
-            if let Some(priority) = self.priority.get(&c.kind){
+            if let Some(operator) = self.operators.iter().find(|e| e.kind == c.kind){
+                let priority = self.priority.get(&operator).unwrap();
 
                 match min_priority {
                     Some(min_p) =>{
@@ -437,10 +451,9 @@ impl<T:TokenKind> ExpressionParser<T>{
         in_group
     }
 
+    /// Strips leading and trailing group
     fn strip_group<'a>(&self, candidates:&'a[Token<T>]) -> Option<&'a[Token<T>]>{
         candidates.get(1..candidates.len()-1)
-
-
     }
 
 
@@ -451,7 +464,7 @@ impl<T:TokenKind> ExpressionParser<T>{
 
         if candidates.len() == 1{
             // Do not accept operators without operands
-            if self.priority.contains_key(&candidates[0].kind){
+            if let Some(_) = self.operators.iter().find(|e| e.kind == candidates[0].kind){
                 return None;
             }else{
                 return Some(AST{ kind: Expr::Operand(candidates[0].clone()), children: vec![] });
@@ -469,7 +482,8 @@ impl<T:TokenKind> ExpressionParser<T>{
         let min_indx = self.find_min_priority(candidates);
         
         let result = if let Some(min_indx) = min_indx{
-            let operator = &candidates[min_indx];
+            let operator_token = &candidates[min_indx];
+            let operator = self.operators.iter().find(|e| e.kind == operator_token.kind).unwrap();
 
             let mut sucess = true;
             let mut children = vec![];
@@ -478,16 +492,40 @@ impl<T:TokenKind> ExpressionParser<T>{
             let left_sub_expr = candidates.get(0..min_indx).unwrap_or_default();
             let right_sub_expr = candidates.get(min_indx+1..).unwrap_or_default();
 
-            let left = self.parse(left_sub_expr);
-            let right = self.parse(right_sub_expr);
+            match operator.position{
+                Position::Prefix => {
+                    if min_indx != 0{ sucess = false; }
+                    else{
+                        if let Some(right) = self.parse(right_sub_expr){
+                            children.push(right);
+                        }else{ sucess = false; }
+                    }
+                },
 
-            if left.is_none() && right.is_none(){
-                sucess = false;
-            }else{
-                if let Some(left) = left { children.push(left); }
+                Position::Infix => {
+                    let left = self.parse(left_sub_expr);
+                    let right = self.parse(right_sub_expr);
 
-                if let Some(right) = right { children.push(right); }
+                    if left.is_none() && right.is_none(){
+                        sucess = false;
+                    }else{
+                        if let Some(left) = left { children.push(left); }
+        
+                        if let Some(right) = right { children.push(right); }
+                    }
+                },
+
+                Position::Sufix => {
+                    if min_indx != candidates.len()-1 { sucess = false; }
+                    else{
+                        if let Some(left) = self.parse(left_sub_expr){
+                            children.push(left);
+                        }else{ sucess = false; }
+                    }
+                }
             }
+
+            
 
             
 
@@ -495,7 +533,7 @@ impl<T:TokenKind> ExpressionParser<T>{
             if !sucess{
                 None
             }else{
-                Some(AST{ kind: Expr::Operator(operator.clone()), children })
+                Some(AST{ kind: Expr::Operator(operator_token.clone()), children })
             }
             
         }else{

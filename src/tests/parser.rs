@@ -1,6 +1,6 @@
 use std::vec;
 
-use crate::{lexer::*, parser::{*, expression::{ExpressionParser, Expr}}, regex::Symbol};
+use crate::{lexer::*, parser::{*, expression::{ExpressionParser, Expr, Operator, Position}}, regex::Symbol};
 
 #[derive(Debug, Hash, Clone, Copy, PartialOrd, PartialEq, Eq)]
 enum TokenType{
@@ -151,7 +151,7 @@ fn block_parsing(){
 enum ExprTok{
     LParen,
     RParen,
-    Plus, Minus, Mul,
+    Plus, Minus, Mul, Bang,
     A,B, C, D, E, F, G, H
 }
 
@@ -162,10 +162,10 @@ impl TokenKind for ExprTok{}
 fn parse_expr(){
     let mut parser = ExpressionParser::new();
 
-    parser.add_operator(ExprTok::Plus, 1);
-    parser.add_operator(ExprTok::Minus, 1);
+    parser.add_operator(Operator{kind: ExprTok::Plus, position: Position::Infix} , 1);
+    parser.add_operator(Operator{kind: ExprTok::Minus, position: Position::Infix}, 1);
 
-    parser.add_operator(ExprTok::Mul, 2);
+    parser.add_operator(Operator{kind: ExprTok::Mul, position: Position::Infix}, 2);
 
     parser.set_high_priority_group(ExprTok::LParen, ExprTok::RParen);
 
@@ -191,7 +191,8 @@ fn parse_expr(){
             ExprTok::RParen => ")",
             ExprTok::Plus => "+",
             ExprTok::Minus => "-",
-            ExprTok::Mul => "*"
+            ExprTok::Mul => "*",
+            ExprTok::Bang => "!"
         };
         let loc = Location{file: String::new(), line: 0, column: 0};
         Token{kind: e, location: loc, literal: String::from(literal)}
@@ -241,10 +242,10 @@ fn parse_expr(){
 fn parse_expr_nested(){
     let mut parser = ExpressionParser::new();
 
-    parser.add_operator(ExprTok::Plus, 1);
-    parser.add_operator(ExprTok::Minus, 1);
+    parser.add_operator(Operator{kind: ExprTok::Plus, position: Position::Infix} , 1);
+    parser.add_operator(Operator{kind: ExprTok::Minus, position: Position::Infix}, 1);
 
-    parser.add_operator(ExprTok::Mul, 2);
+    parser.add_operator(Operator{kind: ExprTok::Mul, position: Position::Infix}, 2);
 
     parser.set_high_priority_group(ExprTok::LParen, ExprTok::RParen);
 
@@ -282,7 +283,8 @@ fn parse_expr_nested(){
             ExprTok::RParen => ")",
             ExprTok::Plus => "+",
             ExprTok::Minus => "-",
-            ExprTok::Mul => "*"
+            ExprTok::Mul => "*",
+            ExprTok::Bang => "!"
         };
         let loc = Location{file: String::new(), line: 0, column: 0};
         Token{kind: e, location: loc, literal: String::from(literal)}
@@ -317,4 +319,296 @@ fn parse_expr_nested(){
                     
             ] }
         ]});
+}
+
+#[test]
+fn parse_prefix(){
+    let mut parser = ExpressionParser::new();
+
+    parser.add_operator(Operator { kind: ExprTok::Plus, position: Position::Prefix }, 1);
+    parser.set_high_priority_group(ExprTok::LParen, ExprTok::RParen);
+
+    let raw_expr1 = vec![
+        ExprTok::Plus,
+        ExprTok::A,
+        ExprTok::Plus,
+        ExprTok::A
+    ];
+
+    let expr1 = raw_expr1.into_iter().map(|e| {
+        let literal = match e{
+            ExprTok::A => "A",
+            ExprTok::B => "B",
+            ExprTok::C => "C",
+            ExprTok::D => "D",
+            ExprTok::E => "E",
+            ExprTok::F => "F",
+            ExprTok::G => "G",
+            ExprTok::H => "H",
+            ExprTok::LParen => "(",
+            ExprTok::RParen => ")",
+            ExprTok::Plus => "+",
+            ExprTok::Minus => "-",
+            ExprTok::Mul => "*",
+            ExprTok::Bang => "!"
+        };
+        let loc = Location{file: String::new(), line: 0, column: 0};
+        Token{kind: e, location: loc, literal: String::from(literal)}
+    }).collect::<Vec<Token<ExprTok>>>();
+
+    let raw_expr2 = vec![
+        ExprTok::Plus,
+        ExprTok::B,
+        ExprTok::A
+    ];
+
+    let expr2 = raw_expr2.into_iter().map(|e| {
+        let literal = match e{
+            ExprTok::A => "A",
+            ExprTok::B => "B",
+            ExprTok::C => "C",
+            ExprTok::D => "D",
+            ExprTok::E => "E",
+            ExprTok::F => "F",
+            ExprTok::G => "G",
+            ExprTok::H => "H",
+            ExprTok::LParen => "(",
+            ExprTok::RParen => ")",
+            ExprTok::Plus => "+",
+            ExprTok::Minus => "-",
+            ExprTok::Mul => "*",
+            ExprTok::Bang => "!"
+        };
+        let loc = Location{file: String::new(), line: 0, column: 0};
+        Token{kind: e, location: loc, literal: String::from(literal)}
+    }).collect::<Vec<Token<ExprTok>>>();
+
+    assert_eq!(parser.parse(&expr1), None);
+
+    let loc = Location{file: String::new(), line: 0, column: 0};
+
+    assert_eq!(parser.parse(&expr2), Some(AST{
+        kind: Expr::Operator(Token { location: loc.clone(), kind: ExprTok::Plus, literal: "+".to_string() }),
+        children: vec![
+            AST{ kind: Expr::Unknown(&[
+                Token { location: loc.clone(), kind: ExprTok::B, literal: "B".to_string() },
+                Token { location: loc.clone(), kind: ExprTok::A, literal: "A".to_string() }
+                ]), children: vec![] }
+        ]
+    }));
+
+
+}
+
+
+#[test]
+fn parse_sufix(){
+    let mut parser = ExpressionParser::new();
+
+    parser.add_operator(Operator { kind: ExprTok::Mul, position: Position::Sufix }, 1);
+    parser.set_high_priority_group(ExprTok::LParen, ExprTok::RParen);
+
+    let raw_expr1 = vec![
+        ExprTok::A,
+        ExprTok::Mul,
+        ExprTok::A,
+        ExprTok::Mul
+    ];
+
+    let expr1 = raw_expr1.into_iter().map(|e| {
+        let literal = match e{
+            ExprTok::A => "A",
+            ExprTok::B => "B",
+            ExprTok::C => "C",
+            ExprTok::D => "D",
+            ExprTok::E => "E",
+            ExprTok::F => "F",
+            ExprTok::G => "G",
+            ExprTok::H => "H",
+            ExprTok::LParen => "(",
+            ExprTok::RParen => ")",
+            ExprTok::Plus => "+",
+            ExprTok::Minus => "-",
+            ExprTok::Mul => "*",
+            ExprTok::Bang => "!"
+        };
+        let loc = Location{file: String::new(), line: 0, column: 0};
+        Token{kind: e, location: loc, literal: String::from(literal)}
+    }).collect::<Vec<Token<ExprTok>>>();
+
+    let raw_expr2 = vec![
+        ExprTok::C,
+        ExprTok::Mul,
+        ExprTok::Mul
+    ];
+
+    let expr2 = raw_expr2.into_iter().map(|e| {
+        let literal = match e{
+            ExprTok::A => "A",
+            ExprTok::B => "B",
+            ExprTok::C => "C",
+            ExprTok::D => "D",
+            ExprTok::E => "E",
+            ExprTok::F => "F",
+            ExprTok::G => "G",
+            ExprTok::H => "H",
+            ExprTok::LParen => "(",
+            ExprTok::RParen => ")",
+            ExprTok::Plus => "+",
+            ExprTok::Minus => "-",
+            ExprTok::Mul => "*",
+            ExprTok::Bang => "!"
+        };
+        let loc = Location{file: String::new(), line: 0, column: 0};
+        Token{kind: e, location: loc, literal: String::from(literal)}
+    }).collect::<Vec<Token<ExprTok>>>();
+
+    assert_eq!(parser.parse(&expr1), None);
+
+    let loc = Location{file: String::new(), line: 0, column: 0};
+
+    assert_eq!(parser.parse(&expr2), Some(AST{
+        kind: Expr::Operator(Token { location: loc.clone(), kind: ExprTok::Mul, literal: "*".to_string() }),
+        children: vec![
+            AST{
+                kind: Expr::Operator(Token { location: loc.clone(), kind: ExprTok::Mul, literal: "*".to_string() }),
+                children: vec![
+                    AST{
+                        kind: Expr::Operand(Token { location: loc.clone(), kind: ExprTok::C, literal: "C".to_string() }),
+                        children: vec![]
+                     }
+                ] }
+        ]
+    }));
+
+
+}
+
+#[test]
+fn parse_mixed(){
+    let mut parser = ExpressionParser::new();
+
+
+    parser.add_operator(Operator { kind: ExprTok::Plus, position: Position::Prefix }, 1);
+    parser.add_operator(Operator { kind: ExprTok::Mul, position: Position::Infix }, 2);
+    parser.add_operator(Operator { kind: ExprTok::Bang, position: Position::Sufix }, 3);
+
+    parser.set_high_priority_group(ExprTok::LParen, ExprTok::RParen);
+
+    // + a b * c!
+    let raw_expr1 = vec![
+        ExprTok::Plus,
+        ExprTok::A,
+        ExprTok::B,
+        ExprTok::Mul,
+        ExprTok::C,
+        ExprTok::Bang
+    ];
+
+    // (+ a b) * c!
+    let raw_expr2 = vec![
+        ExprTok::LParen,
+        ExprTok::Plus,
+        ExprTok::A,
+        ExprTok::B,
+        ExprTok::RParen,
+        ExprTok::Mul,
+        ExprTok::C,
+        ExprTok::Bang
+    ];
+
+    let expr1 = raw_expr1.into_iter().map(|e| {
+        let literal = match e{
+            ExprTok::A => "A",
+            ExprTok::B => "B",
+            ExprTok::C => "C",
+            ExprTok::D => "D",
+            ExprTok::E => "E",
+            ExprTok::F => "F",
+            ExprTok::G => "G",
+            ExprTok::H => "H",
+            ExprTok::LParen => "(",
+            ExprTok::RParen => ")",
+            ExprTok::Plus => "+",
+            ExprTok::Minus => "-",
+            ExprTok::Mul => "*",
+            ExprTok::Bang => "!"
+        };
+        let loc = Location{file: String::new(), line: 0, column: 0};
+        Token{kind: e, location: loc, literal: String::from(literal)}
+    }).collect::<Vec<Token<ExprTok>>>();
+
+    let expr2 = raw_expr2.into_iter().map(|e| {
+        let literal = match e{
+            ExprTok::A => "A",
+            ExprTok::B => "B",
+            ExprTok::C => "C",
+            ExprTok::D => "D",
+            ExprTok::E => "E",
+            ExprTok::F => "F",
+            ExprTok::G => "G",
+            ExprTok::H => "H",
+            ExprTok::LParen => "(",
+            ExprTok::RParen => ")",
+            ExprTok::Plus => "+",
+            ExprTok::Minus => "-",
+            ExprTok::Mul => "*",
+            ExprTok::Bang => "!"
+        };
+        let loc = Location{file: String::new(), line: 0, column: 0};
+        Token{kind: e, location: loc, literal: String::from(literal)}
+    }).collect::<Vec<Token<ExprTok>>>();
+
+    let loc = Location{file: String::new(), line: 0, column: 0};
+
+    assert_eq!(parser.parse(&expr1), Some(AST{
+        kind: Expr::Operator(Token { location: loc.clone(), kind: ExprTok::Plus, literal: "+".to_string() }),
+        children: vec![
+            AST{
+                kind: Expr::Operator(Token { location: loc.clone(), kind: ExprTok::Mul, literal: "*".to_string() }),
+                children: vec![
+                    AST{
+                        kind: Expr::Unknown(&[
+                            Token { location: loc.clone(), kind: ExprTok::A, literal: "A".to_string() },
+                            Token { location: loc.clone(), kind: ExprTok::B, literal: "B".to_string() }
+                        ]),
+                        children: vec![]
+                    },
+
+                    AST{
+                        kind: Expr::Operator(Token { location: loc.clone(), kind: ExprTok::Bang, literal: "!".to_string() }),
+                        children: vec![
+                            AST { kind: Expr::Operand(Token { location: loc.clone(), kind: ExprTok::C, literal: "C".to_string() }), children: vec![] }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }));
+
+    assert_eq!(parser.parse(&expr2), Some(AST{
+        kind: Expr::Operator(Token { location: loc.clone(), kind: ExprTok::Mul, literal: "*".to_string() }),
+        children: vec![
+            AST{
+                kind: Expr::Operator(Token { location: loc.clone(), kind: ExprTok::Plus, literal: "+".to_string() }),
+                children: vec![
+                    AST{
+                        kind: Expr::Unknown(&[
+                            Token { location: loc.clone(), kind: ExprTok::A, literal: "A".to_string() },
+                            Token { location: loc.clone(), kind: ExprTok::B, literal: "B".to_string() }
+                        ]),
+                        children: vec![]
+                    }
+                ]
+            },
+
+            AST{
+                kind: Expr::Operator(Token { location: loc.clone(), kind: ExprTok::Bang, literal: "!".to_string() }),
+                children: vec![
+                    AST{ kind: Expr::Operand(Token { location: loc.clone(), kind: ExprTok::C, literal: "C".to_string() }), children: vec![] }
+                ]
+            }
+        ]
+    }));
+
 }
