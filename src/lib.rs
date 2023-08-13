@@ -30,7 +30,7 @@ pub fn build_report(message:&str, loc:Location) -> String{
         if reader.read_to_string(&mut contents).is_ok(){
             let line = contents.lines().nth(loc.line).unwrap();
 
-            let size = line.len() - (loc.column+1);
+            let size = line.len() - loc.column;
             let highlighted = highlight(line, loc.column, size);
 
             format!("{message} at {} {}:{}\n{highlighted}", loc.file, loc.line+1, loc.column+1)
