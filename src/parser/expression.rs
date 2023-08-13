@@ -450,7 +450,12 @@ impl<T:TokenKind> ExpressionParser<T>{
         if candidates.is_empty(){ return None; }
 
         if candidates.len() == 1{
-            return Some(AST{ kind: Expr::Operand(candidates[0].clone()), children: vec![] });
+            // Do not accept operators without operands
+            if self.priority.contains_key(&candidates[0].kind){
+                return None;
+            }else{
+                return Some(AST{ kind: Expr::Operand(candidates[0].clone()), children: vec![] });
+            }
         }
 
         if !self.check_groups_validity(candidates){
@@ -473,13 +478,16 @@ impl<T:TokenKind> ExpressionParser<T>{
             let left_sub_expr = candidates.get(0..min_indx).unwrap_or_default();
             let right_sub_expr = candidates.get(min_indx+1..).unwrap_or_default();
 
-            if let Some(left) = self.parse(left_sub_expr){
-                children.push(left);
-            }else{sucess = false;}
+            let left = self.parse(left_sub_expr);
+            let right = self.parse(right_sub_expr);
 
-            if let Some(right) = self.parse(right_sub_expr){
-                children.push(right);
-            }else{ sucess = false; }
+            if left.is_none() && right.is_none(){
+                sucess = false;
+            }else{
+                if let Some(left) = left { children.push(left); }
+
+                if let Some(right) = right { children.push(right); }
+            }
 
             
 
