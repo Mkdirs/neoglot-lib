@@ -288,23 +288,23 @@ pub struct Operator<T:TokenKind>{
 ///     ]
 /// };
 /// 
-/// if let Some(result) = parser.parse(expr1){
+/// if let Some(result) = parser.parse(expr1, &|_, _|false){
 ///     assert_eq!(result, result1);
 /// }else { assert!(false); }
 /// 
-/// if let Some(result) = parser.parse(expr2){
+/// if let Some(result) = parser.parse(expr2, &|_, _|false){
 ///     assert_eq!(result, result2);
 /// }else { assert!(false); }
 /// 
-/// if let Some(result) = parser.parse(expr3){
+/// if let Some(result) = parser.parse(expr3, &|_, _|false){
 ///     assert_eq!(result, result3);
 /// }else { assert!(false); }
 /// 
-/// if let Some(result) = parser.parse(expr4){
+/// if let Some(result) = parser.parse(expr4, &|_, _|false){
 ///     assert_eq!(result, result4);
 /// }else { assert!(false); }
 /// 
-/// if let Some(result) = parser.parse(expr5){
+/// if let Some(result) = parser.parse(expr5, &|_, _|false){
 ///     assert_eq!(result, result5);
 /// }else { assert!(false); }
 /// 
@@ -401,7 +401,7 @@ impl<T:TokenKind> ExpressionParser<T>{
     }
 
     /// Checks if the number of start_groups is equals to the number of end_groups
-    fn check_groups_validity(&self, candidates:&[Token<T>]) -> bool{
+    pub fn check_groups_validity(&self, candidates:&[Token<T>]) -> bool{
         if self.high_priority_group_start.is_none()
         || self.high_priority_group_end.is_none()
         || candidates.is_empty(){
@@ -419,7 +419,7 @@ impl<T:TokenKind> ExpressionParser<T>{
     }
 
     /// Checks if candidates is in the form '(...)'
-    fn is_in_group(&self, candidates:&[Token<T>]) -> bool{
+    pub fn is_in_group(&self, candidates:&[Token<T>]) -> bool{
         if self.high_priority_group_start.is_none()
         || self.high_priority_group_end.is_none()
         || candidates.is_empty(){
@@ -458,7 +458,8 @@ impl<T:TokenKind> ExpressionParser<T>{
 
 
     /// Parse an expression
-    pub fn parse<'a>(&self, candidates:&'a[Token<T>]) -> Option<AST<Expr<'a, T>>>
+    pub fn parse<'a, F>(&self, candidates:&'a[Token<T>], is_function: &F) -> Option<AST<Expr<'a, T>>>
+    where F: Fn(&Self, &[Token<T>]) -> bool
     {
         if candidates.is_empty(){ return None; }
 
@@ -476,7 +477,11 @@ impl<T:TokenKind> ExpressionParser<T>{
         }
 
         if self.is_in_group(candidates){
-            return self.parse(self.strip_group(candidates).unwrap_or_default());
+            return self.parse(self.strip_group(candidates).unwrap_or_default(), is_function);
+        }
+
+        if is_function(self, candidates){
+            return Some(AST { kind: Expr::Unknown(candidates), children: vec![] });
         }
 
         let min_indx = self.find_min_priority(candidates);
@@ -496,15 +501,15 @@ impl<T:TokenKind> ExpressionParser<T>{
                 Position::Prefix => {
                     if min_indx != 0{ sucess = false; }
                     else{
-                        if let Some(right) = self.parse(right_sub_expr){
+                        if let Some(right) = self.parse(right_sub_expr, is_function){
                             children.push(right);
                         }else{ sucess = false; }
                     }
                 },
 
                 Position::Infix => {
-                    let left = self.parse(left_sub_expr);
-                    let right = self.parse(right_sub_expr);
+                    let left = self.parse(left_sub_expr, is_function);
+                    let right = self.parse(right_sub_expr, is_function);
 
                     if left.is_none() && right.is_none(){
                         sucess = false;
@@ -518,7 +523,7 @@ impl<T:TokenKind> ExpressionParser<T>{
                 Position::Sufix => {
                     if min_indx != candidates.len()-1 { sucess = false; }
                     else{
-                        if let Some(left) = self.parse(left_sub_expr){
+                        if let Some(left) = self.parse(left_sub_expr, is_function){
                             children.push(left);
                         }else{ sucess = false; }
                     }

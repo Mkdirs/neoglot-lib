@@ -198,7 +198,7 @@ fn parse_expr(){
         Token{kind: e, location: loc, literal: String::from(literal)}
     }).collect::<Vec<Token<ExprTok>>>();
 
-    let result = parser.parse(&expr);
+    let result = parser.parse(&expr, &|_, _|false);
 
     assert!(result.is_some());
 
@@ -290,7 +290,7 @@ fn parse_expr_nested(){
         Token{kind: e, location: loc, literal: String::from(literal)}
     }).collect::<Vec<Token<ExprTok>>>();
 
-    let result = parser.parse(&expr);
+    let result = parser.parse(&expr, &|_, _|false);
 
     assert!(result.is_some());
 
@@ -383,11 +383,11 @@ fn parse_prefix(){
         Token{kind: e, location: loc, literal: String::from(literal)}
     }).collect::<Vec<Token<ExprTok>>>();
 
-    assert_eq!(parser.parse(&expr1), None);
+    assert_eq!(parser.parse(&expr1, &|_, _|false), None);
 
     let loc = Location{file: String::new(), line: 0, column: 0};
 
-    assert_eq!(parser.parse(&expr2), Some(AST{
+    assert_eq!(parser.parse(&expr2, &|_, _|false), Some(AST{
         kind: Expr::Operator(Token { location: loc.clone(), kind: ExprTok::Plus, literal: "+".to_string() }),
         children: vec![
             AST{ kind: Expr::Unknown(&[
@@ -463,11 +463,11 @@ fn parse_sufix(){
         Token{kind: e, location: loc, literal: String::from(literal)}
     }).collect::<Vec<Token<ExprTok>>>();
 
-    assert_eq!(parser.parse(&expr1), None);
+    assert_eq!(parser.parse(&expr1, &|_, _|false), None);
 
     let loc = Location{file: String::new(), line: 0, column: 0};
 
-    assert_eq!(parser.parse(&expr2), Some(AST{
+    assert_eq!(parser.parse(&expr2, &|_, _|false), Some(AST{
         kind: Expr::Operator(Token { location: loc.clone(), kind: ExprTok::Mul, literal: "*".to_string() }),
         children: vec![
             AST{
@@ -561,7 +561,7 @@ fn parse_mixed(){
 
     let loc = Location{file: String::new(), line: 0, column: 0};
 
-    assert_eq!(parser.parse(&expr1), Some(AST{
+    assert_eq!(parser.parse(&expr1, &|_, _|false), Some(AST{
         kind: Expr::Operator(Token { location: loc.clone(), kind: ExprTok::Plus, literal: "+".to_string() }),
         children: vec![
             AST{
@@ -586,7 +586,7 @@ fn parse_mixed(){
         ]
     }));
 
-    assert_eq!(parser.parse(&expr2), Some(AST{
+    assert_eq!(parser.parse(&expr2, &|_, _|false), Some(AST{
         kind: Expr::Operator(Token { location: loc.clone(), kind: ExprTok::Mul, literal: "*".to_string() }),
         children: vec![
             AST{
