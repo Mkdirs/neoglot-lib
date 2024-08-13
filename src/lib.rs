@@ -5,7 +5,7 @@ use lexer::Location;
 /// A module for building abstract regular expressions
 /// 
 /// Build regular expressions with any types you want
-pub mod regex;
+//pub mod regex;
 
 /// Lexical analysis module
 /// 

@@ -1,4 +1,6 @@
-use crate::{lexer::*, regex::*};
+use pattern_matcher::{AtLeast, Symbol, WithQuantifier};
+
+use crate::lexer::*;
 
 #[derive(PartialEq, PartialOrd, Eq, Hash, Copy, Clone, Debug)]
 enum TokenType{
@@ -14,24 +16,27 @@ impl TokenKind for TokenType{}
 
 #[test]
 fn node_lexing(){
-    let node = LexerNode::new(
-        Regex::<char>::new().then(RegexElement::Set('0', '9', Quantifier::OneOrMany)),
-        TokenType::UINT
-    );
+    let node = LexerModule::new(TokenType::UINT, |pipeline| {
+        Ok(
+            pipeline
+            .with_quantifier(AtLeast(1), |p| p.expect_any_of(&['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']))?
+            .terminate()
+        )
+    });
 
     let virtual_location = Location{ file: "virtual_file".to_string(), line:0, column:0};
 
-    let candidate1 = "hello world".chars().collect::<Vec<char>>();
-    let candidate2 = " ".chars().collect::<Vec<char>>();
-    let candidate3 = "-10°C".chars().collect::<Vec<char>>();
-    let candidate4 = "1256 + 359".chars().collect::<Vec<char>>();
-    let candidate5 = "30_cobra () func let i".chars().collect::<Vec<char>>();
+    let candidate1 = "hello world";
+    let candidate2 = " ";
+    let candidate3 = "-10°C";
+    let candidate4 = "1256 + 359";
+    let candidate5 = "30_cobra () func let i";
 
-    let result1:(&[char], Option<Token<TokenType>>) = (&['h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd'], None);
-    let result2:(&[char], Option<Token<TokenType>>) = (&[' '], None);
-    let result3:(&[char], Option<Token<TokenType>>) = (&['-', '1', '0', '°', 'C'], None);
-    let result4:(&[char], Option<Token<TokenType>>) = (&[' ', '+', ' ', '3', '5', '9'], Some(Token{location: virtual_location.clone(), kind: TokenType::UINT, literal: "1256".to_string()}) );
-    let result5:(&[char], Option<Token<TokenType>>) = (&['_', 'c', 'o', 'b', 'r', 'a', ' ', '(', ')', ' ', 'f', 'u', 'n', 'c', ' ', 'l', 'e', 't', ' ', 'i'], Some(Token{location: virtual_location.clone(), kind: TokenType::UINT, literal: "30".to_string()}) );
+    let result1 = None;
+    let result2 = None;
+    let result3 = None;
+    let result4 = Some( (Token{location: virtual_location.clone(), kind: TokenType::UINT, literal: "1256".to_string()}, 4 ) );
+    let result5 = Some( (Token{location: virtual_location.clone(), kind: TokenType::UINT, literal: "30".to_string()}, 2) );
 
     assert_eq!(node.tokenize(&candidate1, &virtual_location), result1);
     assert_eq!(node.tokenize(&candidate2, &virtual_location), result2);
@@ -45,30 +50,21 @@ fn node_lexing(){
 fn file_lexing(){
     let mut lexer = Lexer::<TokenType>::new();
 
-    let uint_node = LexerNode::new(
-        Regex::new().then(RegexElement::Set('0', '9', Quantifier::OneOrMany)),
-        TokenType::UINT
-    );
+    let uint_node = LexerModule::new(TokenType::UINT, |pipeline| {
+        Ok(
+            pipeline
+            .with_quantifier(AtLeast(1), |p| p.expect_any_of(&['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']))?
+            .terminate()
+        )
+    });
 
-    let plus_node = LexerNode::new(
-        Regex::new().then(RegexElement::Item('+', Quantifier::Exactly(1))),
-        TokenType::PLUS
-    );
+    let plus_node = LexerModule::new(TokenType::PLUS, |pipeline| Ok(pipeline.expect_symbol(&'+')?.terminate()));
 
-    let minus_node = LexerNode::new(
-        Regex::new().then(RegexElement::Item('-', Quantifier::Exactly(1))),
-        TokenType::MINUS
-    );
+    let minus_node = LexerModule::new(TokenType::MINUS, |pipeline| Ok(pipeline.expect_symbol(&'-')?.terminate()));
 
-    let times_node = LexerNode::new(
-        Regex::new().then(RegexElement::Item('*', Quantifier::Exactly(1))),
-        TokenType::TIMES
-    );
+    let times_node = LexerModule::new(TokenType::TIMES, |pipeline| Ok(pipeline.expect_symbol(&'*')?.terminate()));
 
-    let divide_node = LexerNode::new(
-        Regex::new().then(RegexElement::Item('/', Quantifier::Exactly(1))),
-        TokenType::DIVIDE
-    );
+    let divide_node = LexerModule::new(TokenType::DIVIDE, |pipeline| Ok(pipeline.expect_symbol(&'/')?.terminate()));
 
     lexer.register(uint_node);
     lexer.register(plus_node);
@@ -81,29 +77,19 @@ fn file_lexing(){
     let result3 = lexer.tokenize_content(include_str!("basic_math_sheet.txt").to_string(), "basic_math_sheet.txt");
 
     match result1 {
-        LexingResult::Ok(tokens) => assert!(tokens.is_empty()),
-        LexingResult::Err(_) => assert!(false)
+        Ok(tokens) => assert!(tokens.is_empty()),
+        Err(_) => assert!(false)
     }
     
     match result2{
-        LexingResult::Ok(_) => assert!(false),
-        LexingResult::Err(errors) => {
-            assert_eq!(errors.len(), 8);
-            assert_eq!(errors, vec![
-                LexingError{ location:Location { file: "invalid.txt".to_string(), line: 2, column: 2 } },
-                LexingError{ location:Location { file: "invalid.txt".to_string(), line: 2, column: 3 } },
-                LexingError{ location:Location { file: "invalid.txt".to_string(), line: 2, column: 4 } },
-                LexingError{ location:Location { file: "invalid.txt".to_string(), line: 2, column: 5 } },
-                LexingError{ location:Location { file: "invalid.txt".to_string(), line: 2, column: 6 } },
-                LexingError{ location:Location { file: "invalid.txt".to_string(), line: 2, column: 7 } },
-                LexingError{ location:Location { file: "invalid.txt".to_string(), line: 2, column: 8 } },
-                LexingError{ location:Location { file: "invalid.txt".to_string(), line: 2, column: 9 } }
-            ]);
+        Ok(_) => assert!(false),
+        Err(e) => {
+            assert_eq!(e, LexingError{ location:Location { file: "invalid.txt".to_string(), line: 2, column: 2 } });
         }
     }
 
     match result3{
-        LexingResult::Ok(tokens) => {
+        Ok(tokens) => {
             assert_eq!(tokens, vec![
                 Token{ location:Location { file: "basic_math_sheet.txt".to_string(), line: 0, column: 0 },
                     kind: TokenType::UINT, literal: "10".to_string()
@@ -131,7 +117,7 @@ fn file_lexing(){
 
             ]);
         },
-        LexingResult::Err(_) => assert!(false)
+        Err(_) => assert!(false)
     }
 
 }

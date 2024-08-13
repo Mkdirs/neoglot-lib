@@ -34,7 +34,8 @@ pub struct Operator<T:TokenKind>{
 /// 
 /// # Exemples
 /// ```rust
-/// use crate::neoglot_lib::{regex::*, parser::{expression::*, *}, lexer::*};
+/// use crate::neoglot_lib::{parser::{expression::*, *}, lexer::*};
+/// use pattern_matcher::*;
 /// use std::path::Path;
 /// 
 /// #[derive(Debug, Copy, Clone, Hash, PartialOrd, Eq, PartialEq)]

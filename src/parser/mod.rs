@@ -1,7 +1,9 @@
 /// Special module for expression parsing
 pub mod expression;
 
-use crate::{lexer::{TokenKind, Token}, regex::Regex};
+use pattern_matcher::{MatchingPipeline, PipelineError, TerminatedPipeline};
+
+use crate::lexer::{TokenKind, Token};
 
 
 #[derive(Debug, PartialEq, Clone)]
@@ -77,25 +79,32 @@ impl<'a, T: TokenKind> Parser<'a, T>{
         self.peek().unwrap().kind == kind
     }
 
-    /// Returns true if the sequence of tokens match the regex
-    pub fn on_regex(&self, regex:&Regex<T>) -> bool{
+    /// Returns true if the sequence of tokens match the pattern
+    pub fn on_pattern(&self, matcher: impl Fn(MatchingPipeline<T>) -> Result<TerminatedPipeline<T>, PipelineError<'a, T>>) -> bool{
         if self.finished(){ return false; }
 
-        let kinds = &self.tokens.iter().map(|e| e.kind).collect::<Vec<T>>();
-        let (matched, _) = regex.split_first(kinds);
-        !matched.is_empty()
+        let pipeline = MatchingPipeline::new(self.tokens.iter().map(|e| e.kind));
+
+        match matcher(pipeline){
+            Ok(_) => true,
+            Err(_) => false 
+        }
+
+        
     }
 
-    /// Slices tokens that match the regex
-    pub fn slice_regex(&self, regex:&Regex<T>) -> Option<&'a[Token<T>]>{
+    /// Slices tokens that match the given pattern
+    pub fn slice_pattern(&self, matcher: impl Fn(MatchingPipeline<T>) -> Result<TerminatedPipeline<T>, PipelineError<'a, T>>) -> Option<&'a[Token<T>]>{
         if self.finished(){ return None; }
 
-        let kinds = &self.tokens.iter().map(|e| e.kind).collect::<Vec<T>>();
-        let (matched, _) = regex.split_first(kinds);
 
-        if matched.is_empty(){ return None; }
+        let pipeline = MatchingPipeline::new(self.tokens.iter().map(|e| e.kind));
 
-        Some(&self.tokens[..matched.len()])
+        match matcher(pipeline){
+            Ok(pipeline) => self.tokens.get(..pipeline.offset()),
+            Err(_) => None
+        }
+        
     }
 
 

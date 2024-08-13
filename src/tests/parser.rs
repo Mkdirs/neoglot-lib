@@ -1,6 +1,8 @@
 use std::vec;
 
-use crate::{lexer::*, parser::{*, expression::{ExpressionParser, Expr, Operator, Position}}, regex::Symbol};
+use pattern_matcher::Symbol;
+
+use crate::{lexer::*, parser::{*, expression::{ExpressionParser, Expr, Operator, Position}}};
 
 #[derive(Debug, Hash, Clone, Copy, PartialOrd, PartialEq, Eq)]
 enum TokenType{
