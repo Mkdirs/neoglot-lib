@@ -17,6 +17,8 @@ pub mod lexer;
 /// Extracts Abstract Syntax Trees from tokens
 pub mod parser;
 
+pub use pattern_matcher;
+
 /// Build an error message
 pub fn build_report(message:&str, loc:Location) -> String{
     use std::fs::File;

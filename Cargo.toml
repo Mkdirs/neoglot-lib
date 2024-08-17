@@ -6,4 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-pattern_matcher = { path="../pattern_matcher" }
+pattern_matcher = { git = "https://github.com/Mkdirs/pattern_matcher" }
+
+# This will use a local version of the dependency, so I don't have to push/pull everytime I make a change
+# Delete this if not of use
+[patch."https://github.com/Mkdirs/pattern_matcher"]
+pattern_matcher = { path = "../pattern_matcher"}

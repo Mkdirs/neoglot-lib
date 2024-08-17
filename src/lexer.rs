@@ -129,7 +129,7 @@ impl Display for LexingError{
 impl Error for LexingError{}
 
 /// Result type of the lexing process
-type LexingResult<T> = Result<Vec<Token<T>>, LexingError>;
+pub type LexingResult<T> = Result<Vec<Token<T>>, LexingError>;
 
 
 /// The Lexer performs a lexical analysis on characters and extract the [tokens](Token)
